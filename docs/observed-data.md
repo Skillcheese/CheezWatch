@@ -77,7 +77,7 @@ Tier = `floor(min(gather level, process level) / 10)`. Skill levels come from `l
 | Gauntlet Lab field | Source message / field | Notes |
 |---|---|---|
 | `movement_speed` | `player_state.data.path.speed` | px/s; only present while moving |
-| `backpack_size` | `ledger_data.now.un` | 28 + 4 per satchel. Satchels assumed to be `extender_t<n>` (only `extender_t1` seen; unconfirmed) |
+| `backpack_size` | `ledger_data.now.un` | 28 + 4 per satchel. No satchel unlocked yet; ids assumed to contain `satchel` (unconfirmed). `extender_t1` is something else |
 | `role_stats[Role].tier` | `ledger_data.now.sk` | Via `roleTier()`; `extractLedger` returns `roleTiers` |
 | `gather_time` / `gather_success` / `double_gather` | `unlock_summaries` | `roleStatsFromUnlocks()` in `lab-profile.js`. See assumptions below |
 | `process_time` / `process_success` | `unlock_summaries` | Same |

@@ -4,8 +4,9 @@ import { ROLE_SKILLS, roleTier } from "./gauntlet-roles.js";
 
 const BASE_BACKPACK = 28;
 const SLOTS_PER_SATCHEL = 4;
-// Satchels appear in the unlocks map (`un`) as extender_t1, extender_t2, ...
-const SATCHEL = /^extender_t\d+$/;
+// Satchel ids haven't been seen yet; this guesses they contain "satchel".
+// Check the unlocks map (`un`) once one is unlocked and adjust.
+const SATCHEL = /satchel/i;
 
 /**
  * Returns { at, skills: { [skill]: { level, xp } }, gauntletRuns?, roleTiers, backpackSize? }
