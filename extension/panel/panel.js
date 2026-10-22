@@ -152,25 +152,41 @@ onObserved((ev) => {
 // The lab iframe shares our origin and localStorage, so Me is updated from
 // outside and the iframe reloaded to pick it up. Nothing goes to the game tab.
 const labFrame = document.querySelector("#lab iframe");
+// The game sends these only on login/return and when [Q] Unlocks opens, so the
+// latest of each is kept and reapplied whenever the lab (re)loads.
+const SYNC_KEY = "companion-lab-sync-v1";
 
-function updateLabMe(update, message) {
-  let state;
-  try { state = JSON.parse(localStorage.getItem(LAB_STORAGE_KEY)); } catch { return; }
-  if (!update(state)) return;
-  localStorage.setItem(LAB_STORAGE_KEY, JSON.stringify(state));
-  labFrame.contentWindow.location.reload();
-  statusText.textContent = `Gauntlet Lab: Me updated (${message})`;
+function loadSync() {
+  try { return JSON.parse(localStorage.getItem(SYNC_KEY)) ?? {}; } catch { return {}; }
 }
 
+function syncLabMe() {
+  const { roleTiers, unlocks } = loadSync();
+  let state;
+  try { state = JSON.parse(localStorage.getItem(LAB_STORAGE_KEY)); } catch { return; }
+  // Lab hasn't saved its state yet; its first load event will retry.
+  if (!state) return;
+  const changed = [
+    roleTiers && applyRoleTiers(state, roleTiers),
+    unlocks && applyUnlockStats(state, unlocks),
+  ].some(Boolean);
+  if (!changed) return;
+  localStorage.setItem(LAB_STORAGE_KEY, JSON.stringify(state));
+  labFrame.contentWindow.location.reload();
+  const tiers = roleTiers ? Object.entries(roleTiers).map(([r, t]) => `${r} T${t}`).join(", ") : "no tiers yet";
+  statusText.textContent = `Gauntlet Lab: Me updated (${tiers}${unlocks ? ", stats from unlocks" : ", open [Q] Unlocks for stats"})`;
+}
+
+labFrame.addEventListener("load", syncLabMe);
+
 onObserved((ev) => {
-  if (ev.kind !== "ws-in") return;
-  if (ev.body?.includes("ledger_data")) {
-    const ledger = extractLedger(ev.body);
-    if (!ledger) return;
-    const tiers = Object.entries(ledger.roleTiers).map(([r, t]) => `${r} T${t}`).join(", ");
-    updateLabMe((state) => applyRoleTiers(state, ledger.roleTiers), tiers);
-  } else if (ev.body?.includes("unlock_summaries")) {
-    const unlocks = extractUnlockSummaries(ev.body);
-    if (unlocks) updateLabMe((state) => applyUnlockStats(state, unlocks), "times, success and double gather from unlocks");
-  }
+  if (ev.kind !== "ws-in" || !ev.body) return;
+  const sync = loadSync();
+  const ledger = ev.body.includes("ledger_data") ? extractLedger(ev.body) : null;
+  const unlocks = ev.body.includes("unlock_summaries") ? extractUnlockSummaries(ev.body) : null;
+  if (!ledger && !unlocks) return;
+  if (ledger) sync.roleTiers = ledger.roleTiers;
+  if (unlocks) sync.unlocks = unlocks;
+  localStorage.setItem(SYNC_KEY, JSON.stringify(sync));
+  syncLabMe();
 });
