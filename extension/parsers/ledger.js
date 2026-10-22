@@ -2,8 +2,13 @@
 // the game. `now` is current; `last`, `day` and `week` are older snapshots.
 import { ROLE_SKILLS, roleTier } from "./gauntlet-roles.js";
 
+const BASE_BACKPACK = 28;
+const SLOTS_PER_SATCHEL = 4;
+// Satchels appear in the unlocks map (`un`) as extender_t1, extender_t2, ...
+const SATCHEL = /^extender_t\d+$/;
+
 /**
- * Returns { at, skills: { [skill]: { level, xp } }, gauntletRuns?, roleTiers }
+ * Returns { at, skills: { [skill]: { level, xp } }, gauntletRuns?, roleTiers, backpackSize? }
  * from a raw WS payload, or null if it holds no ledger.
  */
 export function extractLedger(payload) {
@@ -26,5 +31,9 @@ export function extractLedger(payload) {
   }
   const result = { at: now.at, skills, roleTiers };
   if (Number.isFinite(now.rd?.gauntlet)) result.gauntletRuns = now.rd.gauntlet;
+  if (now.un && typeof now.un === "object") {
+    const satchels = Object.keys(now.un).filter((k) => SATCHEL.test(k) && now.un[k]).length;
+    result.backpackSize = BASE_BACKPACK + SLOTS_PER_SATCHEL * satchels;
+  }
   return result;
 }

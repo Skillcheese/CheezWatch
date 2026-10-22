@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { applyRoleTiers, applyUnlockStats, roleStatsFromUnlocks } from "./lab-profile.js";
+import { applyBackpackSize, applyRoleTiers, applyUnlockStats, roleStatsFromUnlocks } from "./lab-profile.js";
 
 const stats = (tier) => ({ tier, gather_time: 3, gather_success: 0.9, double_gather: 0.1, process_time: 2, process_success: 0.9 });
 
@@ -45,4 +45,12 @@ test("applies unlock stats to Me and keeps tier", () => {
   assert.equal(state.profiles.Me.role_stats.Health.tier, 3);
   assert.equal(state.profiles.Me.role_stats.Health.double_gather, 0.0631);
   assert.equal(applyUnlockStats(state, unlocks), false);
+});
+
+test("sets backpack size only when it differs", () => {
+  const state = { profiles: { Me: { backpack_size: 28 } } };
+  assert.equal(applyBackpackSize(state, 32), true);
+  assert.equal(state.profiles.Me.backpack_size, 32);
+  assert.equal(applyBackpackSize(state, 32), false);
+  assert.equal(applyBackpackSize(state, undefined), false);
 });

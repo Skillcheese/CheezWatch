@@ -3,7 +3,7 @@
 import { observeTab } from "./observer.js";
 import { extractLedger } from "../parsers/ledger.js";
 import { extractUnlockSummaries } from "../parsers/unlock-summaries.js";
-import { LAB_STORAGE_KEY, applyRoleTiers, applyUnlockStats } from "../parsers/lab-profile.js";
+import { LAB_STORAGE_KEY, applyBackpackSize, applyRoleTiers, applyUnlockStats } from "../parsers/lab-profile.js";
 
 const MAX_ROWS = 500;
 // Login sends state once, then a burst of ticks follows; keep far more than we
@@ -161,20 +161,22 @@ function loadSync() {
 }
 
 function syncLabMe() {
-  const { roleTiers, unlocks } = loadSync();
+  const { roleTiers, backpackSize, unlocks } = loadSync();
   let state;
   try { state = JSON.parse(localStorage.getItem(LAB_STORAGE_KEY)); } catch { return; }
   // Lab hasn't saved its state yet; its first load event will retry.
   if (!state) return;
   const changed = [
     roleTiers && applyRoleTiers(state, roleTiers),
+    applyBackpackSize(state, backpackSize),
     unlocks && applyUnlockStats(state, unlocks),
   ].some(Boolean);
   if (!changed) return;
   localStorage.setItem(LAB_STORAGE_KEY, JSON.stringify(state));
   labFrame.contentWindow.location.reload();
   const tiers = roleTiers ? Object.entries(roleTiers).map(([r, t]) => `${r} T${t}`).join(", ") : "no tiers yet";
-  statusText.textContent = `Gauntlet Lab: Me updated (${tiers}${unlocks ? ", stats from unlocks" : ", open [Q] Unlocks for stats"})`;
+  const bag = backpackSize ? `, backpack ${backpackSize}` : "";
+  statusText.textContent = `Gauntlet Lab: Me updated (${tiers}${bag}${unlocks ? ", stats from unlocks" : ", open [Q] Unlocks for stats"})`;
 }
 
 labFrame.addEventListener("load", syncLabMe);
@@ -185,7 +187,10 @@ onObserved((ev) => {
   const ledger = ev.body.includes("ledger_data") ? extractLedger(ev.body) : null;
   const unlocks = ev.body.includes("unlock_summaries") ? extractUnlockSummaries(ev.body) : null;
   if (!ledger && !unlocks) return;
-  if (ledger) sync.roleTiers = ledger.roleTiers;
+  if (ledger) {
+    sync.roleTiers = ledger.roleTiers;
+    if (ledger.backpackSize) sync.backpackSize = ledger.backpackSize;
+  }
   if (unlocks) sync.unlocks = unlocks;
   localStorage.setItem(SYNC_KEY, JSON.stringify(sync));
   syncLabMe();

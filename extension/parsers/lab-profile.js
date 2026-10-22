@@ -20,6 +20,14 @@ export function applyRoleTiers(state, roleTiers) {
   return changed;
 }
 
+/** Sets Me's backpack size in `state` in place. Returns true if it changed. */
+export function applyBackpackSize(state, size) {
+  const me = state?.profiles?.Me;
+  if (!me || !Number.isFinite(size) || me.backpack_size === size) return false;
+  me.backpack_size = size;
+  return true;
+}
+
 // Gauntlet Lab's untiered baseline (its "Generic T0" profile).
 const BASE = { time: 1, success: 0.75, double: 0 };
 // Gauntlet actions take a tenth of the overworld time, so overworld duration
