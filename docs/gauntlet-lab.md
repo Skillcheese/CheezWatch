@@ -36,14 +36,14 @@ The built-in `Me` profile is the player. `Clone` mirrors `Me` at 90% movement sp
 
 `app.ts` saves the whole `AppState` to `localStorage["gauntlet-lab-web-current-v3"]` and reads it back on load. The lab runs in an iframe at `chrome-extension://<id>/lab/index.html`, and the panel at `chrome-extension://<id>/panel/index.html`. Those are the **same origin**, so they share localStorage and the panel can reach the iframe directly.
 
-Planned way to auto-fill `Me` without editing upstream code:
+How `Me` is auto-filled without editing upstream code (implemented in `extension/panel/panel.js` + `extension/parsers/lab-profile.js`; currently only role tiers, from `ledger_data`):
 1. The panel builds a `PlayerProfile` from observed data.
 2. The panel reads `localStorage["gauntlet-lab-web-current-v3"]`, replaces `state.profiles.Me`, and writes it back.
 3. The panel reloads the lab iframe so it picks up the new state.
 
 This all happens in our own extension pages, never in the game tab, so it doesn't break the read-only rule.
 
-If upstream changes `STORAGE_KEY` or the `AppState` shape, step 3 must be updated to match.
+If upstream changes `STORAGE_KEY` or the `AppState` shape, `LAB_STORAGE_KEY` / `applyRoleTiers` in `lab-profile.js` must be updated to match.
 
 ## Updating the submodule
 

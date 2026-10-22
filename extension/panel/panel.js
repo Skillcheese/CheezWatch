@@ -1,6 +1,8 @@
 // Panel UI: shows what the game page sends and receives so we can learn its
 // data shapes, before building dedicated read-only views on top of them.
 import { observeTab } from "./observer.js";
+import { extractLedger } from "../parsers/ledger.js";
+import { LAB_STORAGE_KEY, applyRoleTiers } from "../parsers/lab-profile.js";
 
 const MAX_ROWS = 500;
 // Login sends state once, then a burst of ticks follows; keep far more than we
@@ -144,4 +146,21 @@ onObserved((ev) => {
   if (!matches(ev)) return;
   log.prepend(row(ev));
   while (log.children.length > MAX_ROWS) log.lastElementChild.remove();
+});
+
+// The lab iframe shares our origin and localStorage, so Me is updated from
+// outside and the iframe reloaded to pick it up. Nothing goes to the game tab.
+const labFrame = document.querySelector("#lab iframe");
+
+onObserved((ev) => {
+  if (ev.kind !== "ws-in" || !ev.body?.includes("ledger_data")) return;
+  const ledger = extractLedger(ev.body);
+  if (!ledger) return;
+  let state;
+  try { state = JSON.parse(localStorage.getItem(LAB_STORAGE_KEY)); } catch { return; }
+  if (!applyRoleTiers(state, ledger.roleTiers)) return;
+  localStorage.setItem(LAB_STORAGE_KEY, JSON.stringify(state));
+  labFrame.contentWindow.location.reload();
+  const tiers = Object.entries(ledger.roleTiers).map(([r, t]) => `${r} T${t}`).join(", ");
+  statusText.textContent = `Gauntlet Lab: Me updated (${tiers})`;
 });
