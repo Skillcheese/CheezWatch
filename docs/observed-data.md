@@ -76,7 +76,7 @@ Tier = `floor(min(gather level, process level) / 10)`. Skill levels come from `l
 
 | Gauntlet Lab field | Source message / field | Notes |
 |---|---|---|
-| `movement_speed` | `player_state.data.path.speed` | px/s; only present while moving |
+| `movement_speed` | vigor level (`ledger_data`) + `all_skills.move_speed` (`unlock_summaries`) | Lab 10 = normal. 10 + vigor bonus + 10 × move_speed%. Vigor bonus is a line through 43 → +5.3, 65 → +7.6 (from the player; true curve unknown, inaccurate at low levels). Gear/potions not included. `player_state.path.speed` is exact but we can't tell which player is us yet |
 | `backpack_size` | `ledger_data.now.un` | 28 + 4 per satchel. No satchel unlocked yet; ids assumed to contain `satchel` (unconfirmed). `extender_t1` is something else |
 | `role_stats[Role].tier` | `ledger_data.now.sk` | Via `roleTier()`; `extractLedger` returns `roleTiers` |
 | `gather_time` / `gather_success` / `double_gather` | `unlock_summaries` | `roleStatsFromUnlocks()` in `lab-profile.js`. See assumptions below |

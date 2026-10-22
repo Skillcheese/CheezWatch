@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { applyBackpackSize, applyRoleTiers, applyUnlockStats, roleStatsFromUnlocks } from "./lab-profile.js";
+import { applyMovementSpeed, movementSpeed, vigorSpeedBonus, applyBackpackSize, applyRoleTiers, applyUnlockStats, roleStatsFromUnlocks } from "./lab-profile.js";
 
 const stats = (tier) => ({ tier, gather_time: 3, gather_success: 0.9, double_gather: 0.1, process_time: 2, process_success: 0.9 });
 
@@ -53,4 +53,17 @@ test("sets backpack size only when it differs", () => {
   assert.equal(state.profiles.Me.backpack_size, 32);
   assert.equal(applyBackpackSize(state, 32), false);
   assert.equal(applyBackpackSize(state, undefined), false);
+});
+
+test("vigor bonus passes through the known points", () => {
+  assert.equal(Math.round(vigorSpeedBonus(43) * 100) / 100, 5.3);
+  assert.equal(Math.round(vigorSpeedBonus(65) * 100) / 100, 7.6);
+});
+
+test("movement speed adds vigor and the unlock percentage to base 10", () => {
+  assert.equal(movementSpeed(43, { all_skills: { move_speed: 7.81 } }), 16.1);
+  assert.equal(movementSpeed(43, null), 15.3);
+  const state = { profiles: { Me: { movement_speed: 10 } } };
+  assert.equal(applyMovementSpeed(state, 16.1), true);
+  assert.equal(applyMovementSpeed(state, 16.1), false);
 });

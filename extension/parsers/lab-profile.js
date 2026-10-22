@@ -28,6 +28,30 @@ export function applyBackpackSize(state, size) {
   return true;
 }
 
+// Lab speed 10 is normal. Vigor's flat bonus is a straight line through two
+// known points (level 43 -> +5.3, level 65 -> +7.6); the true curve is unknown.
+const BASE_SPEED = 10;
+const VIGOR_POINTS = [[43, 5.3], [65, 7.6]];
+
+export function vigorSpeedBonus(level) {
+  const [[l1, b1], [l2, b2]] = VIGOR_POINTS;
+  return Math.max(0, b1 + (level - l1) * (b2 - b1) / (l2 - l1));
+}
+
+/** Lab movement speed from vigor level plus the unlocks' "% move speed". */
+export function movementSpeed(vigorLevel, unlocks) {
+  const pct = unlocks?.all_skills?.move_speed ?? 0;
+  return Math.round((BASE_SPEED + vigorSpeedBonus(vigorLevel) + BASE_SPEED * pct / 100) * 10) / 10;
+}
+
+/** Sets Me's movement speed in `state` in place. Returns true if it changed. */
+export function applyMovementSpeed(state, speed) {
+  const me = state?.profiles?.Me;
+  if (!me || !Number.isFinite(speed) || me.movement_speed === speed) return false;
+  me.movement_speed = speed;
+  return true;
+}
+
 // Gauntlet Lab's untiered baseline (its "Generic T0" profile).
 const BASE = { time: 1, success: 0.75, double: 0 };
 // Gauntlet actions take a tenth of the overworld time, so overworld duration

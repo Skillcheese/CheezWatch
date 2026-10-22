@@ -54,5 +54,5 @@ Load in Chrome: `chrome://extensions` → Developer mode → **Load unpacked** �
 
 1. ✅ Chrome extension: side panel, passive observer, Traffic log, embedded Gauntlet Lab. (Replaced the earlier Electron app.)
 2. 🟡 Find which observed HTTP/WebSocket messages hold player stats and Gauntlet role tiers. Use the Traffic tab while playing. Record findings in `docs/observed-data.md`.
-3. 🟡 Write parsers that turn those messages into a `PlayerProfile`. Role tiers from `ledger_data`; times/success/double from `unlock_summaries`; backpack size from satchels in `ledger_data`; own movement speed still unknown.
+3. 🟡 Write parsers that turn those messages into a `PlayerProfile`. Role tiers from `ledger_data`; times/success/double from `unlock_summaries`; backpack size from satchels in `ledger_data`; movement speed estimated from vigor + unlocks.
 4. 🟡 Auto-fill Gauntlet Lab's `Me` profile from the parsed state. Tiers sync on `ledger_data`, role stats on `unlock_summaries`.

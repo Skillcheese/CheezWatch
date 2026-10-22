@@ -3,7 +3,7 @@
 import { observeTab } from "./observer.js";
 import { extractLedger } from "../parsers/ledger.js";
 import { extractUnlockSummaries } from "../parsers/unlock-summaries.js";
-import { LAB_STORAGE_KEY, applyBackpackSize, applyRoleTiers, applyUnlockStats } from "../parsers/lab-profile.js";
+import { LAB_STORAGE_KEY, applyMovementSpeed, movementSpeed, applyBackpackSize, applyRoleTiers, applyUnlockStats } from "../parsers/lab-profile.js";
 
 const MAX_ROWS = 500;
 // Login sends state once, then a burst of ticks follows; keep far more than we
@@ -161,7 +161,8 @@ function loadSync() {
 }
 
 function syncLabMe() {
-  const { roleTiers, backpackSize, unlocks } = loadSync();
+  const { roleTiers, backpackSize, vigorLevel, unlocks } = loadSync();
+  const speed = vigorLevel ? movementSpeed(vigorLevel, unlocks) : undefined;
   let state;
   try { state = JSON.parse(localStorage.getItem(LAB_STORAGE_KEY)); } catch { return; }
   // Lab hasn't saved its state yet; its first load event will retry.
@@ -169,13 +170,14 @@ function syncLabMe() {
   const changed = [
     roleTiers && applyRoleTiers(state, roleTiers),
     applyBackpackSize(state, backpackSize),
+    applyMovementSpeed(state, speed),
     unlocks && applyUnlockStats(state, unlocks),
   ].some(Boolean);
   if (!changed) return;
   localStorage.setItem(LAB_STORAGE_KEY, JSON.stringify(state));
   labFrame.contentWindow.location.reload();
   const tiers = roleTiers ? Object.entries(roleTiers).map(([r, t]) => `${r} T${t}`).join(", ") : "no tiers yet";
-  const bag = backpackSize ? `, backpack ${backpackSize}` : "";
+  const bag = (backpackSize ? `, backpack ${backpackSize}` : "") + (speed ? `, speed ${speed}` : "");
   statusText.textContent = `Gauntlet Lab: Me updated (${tiers}${bag}${unlocks ? ", stats from unlocks" : ", open [Q] Unlocks for stats"})`;
 }
 
@@ -190,6 +192,7 @@ onObserved((ev) => {
   if (ledger) {
     sync.roleTiers = ledger.roleTiers;
     if (ledger.backpackSize) sync.backpackSize = ledger.backpackSize;
+    if (ledger.skills.vigor) sync.vigorLevel = ledger.skills.vigor.level;
   }
   if (unlocks) sync.unlocks = unlocks;
   localStorage.setItem(SYNC_KEY, JSON.stringify(sync));
