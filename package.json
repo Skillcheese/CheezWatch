@@ -7,6 +7,6 @@
   "license": "AGPL-3.0-or-later",
   "scripts": {
     "build:lab": "cd gauntlet_lab && npm install && npm run build && cd .. && node scripts/copy-lab.js",
-    "test": "node --test extension/readonly-policy.test.js"
+    "test": "node --test extension/readonly-policy.test.js extension/redact.test.js extension/parsers/*.test.js"
   }
 }

@@ -3,6 +3,9 @@
 import { observeTab } from "./observer.js";
 
 const MAX_ROWS = 500;
+// Login sends state once, then a burst of ticks follows; keep far more than we
+// render so early messages stay searchable.
+const MAX_EVENTS = 20000;
 const GAME_URLS = ["https://scapewatch.com/*", "https://*.scapewatch.com/*"];
 const GAME_URL_RE = /^https:\/\/([^/]+\.)?scapewatch\.com\//;
 const statusText = document.getElementById("status-text");
@@ -57,34 +60,71 @@ for (const btn of document.querySelectorAll("nav [data-tab]")) {
     document.getElementById(btn.dataset.tab).classList.add("active");
   });
 }
-document.getElementById("clear").addEventListener("click", () => { log.textContent = ""; });
-filter.addEventListener("input", () => { for (const li of log.children) applyFilter(li); });
+const events = [];
 
-function applyFilter(li) {
+// Message types already mapped in docs/observed-data.md that arrive constantly
+// (player_state fires for every nearby player; request_appearance is sent for
+// each newly seen player; player_gone when one leaves view). Hidden only when a frame holds
+// nothing else, so batches mixing in other types still show.
+const NOISY_TYPES = new Set(["player_state", "request_appearance", "player_gone"]);
+
+function isNoise(ev) {
+  if (!ev.kind.startsWith("ws-") || !ev.body?.startsWith("{")) return false;
+  try {
+    const msg = JSON.parse(ev.body);
+    const parts = msg.type === "batch" && Array.isArray(msg.data) ? msg.data : [msg];
+    return parts.length > 0 && parts.every((m) => NOISY_TYPES.has(m?.type));
+  } catch { return false; }
+}
+
+document.getElementById("clear").addEventListener("click", () => { events.length = 0; log.textContent = ""; });
+filter.addEventListener("input", render);
+
+function matches(ev) {
   const q = filter.value.trim().toLowerCase();
-  li.hidden = q !== "" && !li.dataset.search.includes(q);
+  return q === "" || ev.search.includes(q);
 }
 
 function pretty(text) {
   try { return JSON.stringify(JSON.parse(text), null, 2); } catch { return text; }
 }
 
-onObserved((ev) => {
-  if (paused.checked) return;
+function row(ev) {
   const li = document.createElement("li");
   const details = document.createElement("details");
   const summary = document.createElement("summary");
   const kind = document.createElement("span");
   kind.className = "kind";
-  kind.textContent = ev.kind;
+  kind.textContent = ev.binary ? `${ev.kind} (bin)` : ev.kind;
   const label = ev.url ? `${ev.status ?? ""} ${ev.url}` : (ev.body ?? "").slice(0, 120);
   summary.append(kind, ` ${new Date(ev.time).toLocaleTimeString()} ${label}`);
   const pre = document.createElement("pre");
-  pre.textContent = ev.body != null ? pretty(ev.body) : "";
+  // Pretty-print lazily: large HTML bodies would make every render slow.
+  details.addEventListener("toggle", () => {
+    if (details.open && !pre.textContent) {
+      pre.textContent = (ev.binary ? `[binary: ${ev.binary}]
+` : "") + (ev.body != null ? pretty(ev.body) : "");
+    }
+  });
   details.append(summary, pre);
   li.append(details);
-  li.dataset.search = `${ev.url ?? ""} ${ev.body ?? ""}`.toLowerCase();
-  applyFilter(li);
-  log.prepend(li);
+  return li;
+}
+
+function render() {
+  const rows = [];
+  for (let i = events.length - 1; i >= 0 && rows.length < MAX_ROWS; i--) {
+    if (matches(events[i])) rows.push(row(events[i]));
+  }
+  log.replaceChildren(...rows);
+}
+
+onObserved((ev) => {
+  if (paused.checked || isNoise(ev)) return;
+  ev.search = `${ev.url ?? ""} ${ev.body ?? ""}`.toLowerCase();
+  events.push(ev);
+  if (events.length > MAX_EVENTS) events.splice(0, events.length - MAX_EVENTS);
+  if (!matches(ev)) return;
+  log.prepend(row(ev));
   while (log.children.length > MAX_ROWS) log.lastElementChild.remove();
 });
