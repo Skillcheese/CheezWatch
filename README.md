@@ -1,22 +1,35 @@
 # ScapeWatch Companion
 
-A RuneLite-style companion client for [ScapeWatch](https://scapewatch.com/). It hosts the real game site in one pane and shows information tools in a side panel.
+A RuneLite-style companion for [ScapeWatch](https://scapewatch.com/), built as a Chrome extension. You play the game in a normal Chrome tab, and information tools appear in Chrome's side panel.
 
 ## The read-only rule
 
-This client **never** sends input, modifies game state, sends its own requests to the game server, or changes the game page in any way. It only reads what the browser already receives.
+This extension **never** sends input, modifies game state, sends its own requests to the game server, or changes the game page in any way. It only reads what the browser already receives.
 
 How the code enforces it:
 
-- The game view loads `scapewatch.com` with **no preload script, no injected JS/CSS, and no request interception** (`session.webRequest` and the CDP `Fetch` domain are never used).
-- All observation goes through the Chrome DevTools Protocol, and every command passes through `app/readonly-policy.js`. Its allowlist has two entries:
+- There are **no content scripts, no injected JS/CSS, no request blocking or rewriting**, and no web-accessible resources. Nothing from the extension runs in, or is visible to, the game page.
+- All observation goes through the Chrome DevTools Protocol (`chrome.debugger`), and every command passes through `extension/readonly-policy.js`. Its allowlist has two entries:
   - `Network.enable`: subscribe to request, response, and WebSocket events
-  - `Network.getResponseBody`: read a body Chromium already buffered (this is a local read, not a network request)
+  - `Network.getResponseBody`: read a body Chrome already buffered (this is a local read, not a network request)
 
   Anything else (`Input.*`, `Runtime.evaluate`, `Page.*`, `Fetch.*`, cookie writes, …) throws. `npm test` checks this.
-- The panel runs in a separate, sandboxed view. Its preload only *receives* events and cannot reach the game view.
 
 Any change to `readonly-policy.js` should be reviewed carefully.
+
+While the panel is attached, Chrome shows a "started debugging this browser" banner. Only you can see it; the page can't detect it. Closing the banner detaches the observer.
+
+## Setup
+
+```sh
+git clone --recurse-submodules <this repo>
+npm run build:lab   # or double-click build.cmd
+npm test
+```
+
+Then in Chrome open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked**, and pick the `extension/` folder. Pin the extension and click its icon to open the side panel.
+
+**Usage:** open scapewatch.com, open the side panel (it attaches automatically), then reload the game tab so the panel sees traffic from the start.
 
 ## Docs
 
@@ -25,22 +38,13 @@ Start with `CLAUDE.md`, then see `docs/`: `architecture.md`, `gauntlet-lab.md`, 
 ## Layout
 
 ```
-app/
-  main.js              Electron shell: game view + panel view, passive network observer
+extension/
+  manifest.json        MV3 manifest
+  background.js        opens the side panel on icon click
   readonly-policy.js   CDP allowlist (the safety boundary)
-  panel-preload.js     receive-only bridge into the panel
-  panel/               side panel UI (Traffic log, Gauntlet Lab tab)
+  panel/               side panel UI (observer.js, Traffic log, Gauntlet Lab tab)
+  lab/                 built Gauntlet Lab (generated)
 gauntlet_lab/          upstream simulator (git submodule, amulder87/gauntlet_lab, AGPL-3.0)
-```
-
-## Setup
-
-```sh
-git clone --recurse-submodules <this repo>
-npm install
-npm run build:lab   # builds gauntlet_lab/dist
-npm test
-npm start           # or double-click run.cmd
 ```
 
 ## Roadmap

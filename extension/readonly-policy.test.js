@@ -1,6 +1,6 @@
-const test = require("node:test");
-const assert = require("node:assert");
-const { assertAllowed, readOnlyDebugger } = require("./readonly-policy");
+import test from "node:test";
+import assert from "node:assert";
+import { assertAllowed, readOnlyDebugger } from "./readonly-policy.js";
 
 test("allows passive network observation", () => {
   assert.doesNotThrow(() => assertAllowed("Network.enable", { maxTotalBufferSize: 1e7 }));
@@ -19,6 +19,8 @@ test("refuses anything that could act on the game", () => {
     "Network.setRequestInterception",
     "Network.replayXHR",
     "Network.setCookie",
+    "Network.setUserAgentOverride",
+    "Emulation.setUserAgentOverride",
     "DOM.setAttributeValue",
     "Storage.clearDataForOrigin",
   ]) {
@@ -32,8 +34,8 @@ test("refuses unexpected Network.enable params", () => {
 
 test("wrapper never forwards a refused command", () => {
   const sent = [];
-  const dbg = readOnlyDebugger({ sendCommand: (m) => sent.push(m) });
+  const dbg = readOnlyDebugger({ sendCommand: (target, m) => sent.push([target.tabId, m]) }, 7);
   assert.throws(() => dbg.sendCommand("Input.dispatchMouseEvent", {}));
   dbg.sendCommand("Network.enable");
-  assert.deepStrictEqual(sent, ["Network.enable"]);
+  assert.deepStrictEqual(sent, [[7, "Network.enable"]]);
 });

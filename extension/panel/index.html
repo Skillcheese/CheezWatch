@@ -13,15 +13,16 @@
     <label><input type="checkbox" id="paused"> Pause</label>
     <button id="clear">Clear</button>
   </nav>
+  <div id="status"><span id="status-text">Not attached</span> <button id="attach">Attach</button></div>
   <main>
     <section id="traffic" class="tab active">
       <input id="filter" placeholder="Filter by URL or content…">
       <ol id="log"></ol>
     </section>
     <section id="lab" class="tab">
-      <iframe src="companion://lab/index.html" title="Gauntlet Lab"></iframe>
+      <iframe src="../lab/index.html" title="Gauntlet Lab"></iframe>
     </section>
   </main>
-  <script src="panel.js"></script>
+  <script type="module" src="panel.js"></script>
 </body>
 </html>

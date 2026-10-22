@@ -4,7 +4,7 @@ Upstream: https://github.com/amulder87/gauntlet_lab (AGPL-3.0). It is a browser-
 
 ## Build
 
-`npm run build:lab` from the repo root runs `npm install && npm run build` inside the submodule. The build does this:
+`npm run build:lab` from the repo root runs `npm install && npm run build` inside the submodule, then `scripts/copy-lab.js` copies `dist/` (minus source maps) into `extension/lab/`, because an extension can only load files inside its own folder. The submodule build does this:
 
 - `tsc -p tsconfig.app.json` compiles `src/core.ts`, `engine.ts`, `optimizer.ts` and `app.ts` into `dist/app.js`. The files are TS namespaces combined into one script, not ES modules.
 - `tsc -p tsconfig.worker.json` compiles to `dist/worker.js`, the simulation Web Worker.
@@ -34,12 +34,14 @@ The built-in `Me` profile is the player. `Clone` mirrors `Me` at 90% movement sp
 
 ## State persistence: the integration point
 
-`app.ts` saves the whole `AppState` to `localStorage["gauntlet-lab-web-current-v3"]` and reads it back on load. The lab runs in an iframe at `companion://lab`, and the panel runs at `companion://panel`. Those are **different origins**, so the panel can't read the lab's localStorage directly.
+`app.ts` saves the whole `AppState` to `localStorage["gauntlet-lab-web-current-v3"]` and reads it back on load. The lab runs in an iframe at `chrome-extension://<id>/lab/index.html`, and the panel at `chrome-extension://<id>/panel/index.html`. Those are the **same origin**, so they share localStorage and the panel can reach the iframe directly.
 
 Planned way to auto-fill `Me` without editing upstream code:
 1. The panel builds a `PlayerProfile` from observed data.
-2. The panel sends it to the iframe with `postMessage`. That needs a small listener in the lab page. The least invasive place for it is a tiny script we inject into `companion://lab/index.html` while serving it from `main.js`. This is our own local page, not the game, so it doesn't break the read-only rule.
-3. The listener writes `state.profiles.Me` into the lab's localStorage key and reloads.
+2. The panel reads `localStorage["gauntlet-lab-web-current-v3"]`, replaces `state.profiles.Me`, and writes it back.
+3. The panel reloads the lab iframe so it picks up the new state.
+
+This all happens in our own extension pages, never in the game tab, so it doesn't break the read-only rule.
 
 If upstream changes `STORAGE_KEY` or the `AppState` shape, step 3 must be updated to match.
 
