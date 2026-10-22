@@ -18,6 +18,10 @@ How the code enforces it:
 
 Any change to `readonly-policy.js` should be reviewed carefully.
 
+## Docs
+
+Start with `CLAUDE.md`, then see `docs/`: `architecture.md`, `gauntlet-lab.md`, `adding-features.md`, `observed-data.md`.
+
 ## Layout
 
 ```
@@ -36,7 +40,7 @@ git clone --recurse-submodules <this repo>
 npm install
 npm run build:lab   # builds gauntlet_lab/dist
 npm test
-npm start
+npm start           # or double-click run.cmd
 ```
 
 ## Roadmap
