@@ -79,5 +79,11 @@ Tier = `floor(min(gather level, process level) / 10)`. Skill levels come from `l
 | `movement_speed` | `player_state.data.path.speed` | px/s; only present while moving |
 | `backpack_size` | _tbd_ | |
 | `role_stats[Role].tier` | `ledger_data.now.sk` | Via `roleTier()`; `extractLedger` returns `roleTiers` |
-| `gather_time` / `gather_success` / `double_gather` | _tbd_ | |
-| `process_time` / `process_success` | _tbd_ | |
+| `gather_time` / `gather_success` / `double_gather` | `unlock_summaries` | `roleStatsFromUnlocks()` in `lab-profile.js`. See assumptions below |
+| `process_time` / `process_success` | `unlock_summaries` | Same |
+
+Unlock → Gauntlet assumptions (from the player; unverified):
+- Base is Gauntlet Lab's T0: 1s, 75% success, 0% double.
+- Gauntlet actions take 1/10 of overworld time, so time = 1 + skill `duration` × 0.1. The per-skill `duration` line equals `all_durations` for every skill seen so far, so they are **not** summed.
+- Success = 75% + `all_skills.success` + skill `success`. Double = gather skill's `duplicate`.
+- Processing `save` has no Gauntlet Lab field and is ignored. Tier isn't used in these numbers.

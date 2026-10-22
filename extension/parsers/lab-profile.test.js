@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { applyRoleTiers } from "./lab-profile.js";
+import { applyRoleTiers, applyUnlockStats, roleStatsFromUnlocks } from "./lab-profile.js";
 
 const stats = (tier) => ({ tier, gather_time: 3, gather_success: 0.9, double_gather: 0.1, process_time: 2, process_success: 0.9 });
 
@@ -17,4 +17,32 @@ test("reports no change when tiers already match or Me is missing", () => {
   assert.equal(applyRoleTiers(state, { Health: 3 }), false);
   assert.equal(applyRoleTiers({ profiles: {} }, { Health: 3 }), false);
   assert.equal(applyRoleTiers(null, { Health: 3 }), false);
+});
+
+const unlocks = {
+  all_skills: { all_durations: -1.06, success: 3 },
+  fish: { duration: -1.06, duplicate: 6.31, success: 6.81 },
+  cook: { duration: -1.06, save: 3.06, success: 6.81 },
+};
+
+test("scales duration cuts to Gauntlet time and adds global + skill success", () => {
+  assert.deepEqual(roleStatsFromUnlocks(unlocks).Health, {
+    gather_time: 0.894, gather_success: 0.8481, double_gather: 0.0631,
+    process_time: 0.894, process_success: 0.8481,
+  });
+});
+
+test("falls back to global bonuses for skills without their own lines", () => {
+  assert.deepEqual(roleStatsFromUnlocks(unlocks).Melee, {
+    gather_time: 0.894, gather_success: 0.78, double_gather: 0,
+    process_time: 0.894, process_success: 0.78,
+  });
+});
+
+test("applies unlock stats to Me and keeps tier", () => {
+  const state = { profiles: { Me: { role_stats: { Health: stats(3) } } } };
+  assert.equal(applyUnlockStats(state, unlocks), true);
+  assert.equal(state.profiles.Me.role_stats.Health.tier, 3);
+  assert.equal(state.profiles.Me.role_stats.Health.double_gather, 0.0631);
+  assert.equal(applyUnlockStats(state, unlocks), false);
 });
