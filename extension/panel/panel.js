@@ -64,9 +64,13 @@ const events = [];
 
 // Message types already mapped in docs/observed-data.md that arrive constantly
 // (player_state fires for every nearby player; request_appearance is sent for
-// each newly seen player; player_gone when one leaves view). Hidden only when a frame holds
+// each newly seen player; player_gone when one leaves view; plus chat and
+// server population updates). Hidden only when a frame holds
 // nothing else, so batches mixing in other types still show.
-const NOISY_TYPES = new Set(["player_state", "request_appearance", "player_gone"]);
+const NOISY_TYPES = new Set([
+  "player_state", "request_appearance", "player_gone",
+  "chat_message", "chat_room_counts", "online_summary",
+]);
 
 function isNoise(ev) {
   if (!ev.kind.startsWith("ws-") || !ev.body?.startsWith("{")) return false;
