@@ -62,7 +62,7 @@ for (const btn of document.querySelectorAll("nav [data-tab]")) {
 }
 const events = [];
 
-// Message types already mapped in docs/observed-data.md that arrive constantly
+// Message types that arrive constantly and hold nothing we need
 // (player_state fires for every nearby player; request_appearance is sent for
 // each newly seen player; player_gone when one leaves view; plus chat and
 // server population updates). Hidden only when a frame holds
