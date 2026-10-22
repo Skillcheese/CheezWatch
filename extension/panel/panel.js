@@ -72,11 +72,24 @@ const NOISY_TYPES = new Set([
   "chat_message", "chat_room_counts", "online_summary",
 ]);
 
+// Our own player_state may carry extra fields (e.g. skills) that others' lack,
+// so the first frame with each new set of data keys is always shown.
+const seenStateShapes = new Set();
+
+function isNewStateShape(m) {
+  if (m?.type !== "player_state" || !m.data || typeof m.data !== "object") return false;
+  const shape = Object.keys(m.data).sort().join(",");
+  if (seenStateShapes.has(shape)) return false;
+  seenStateShapes.add(shape);
+  return true;
+}
+
 function isNoise(ev) {
   if (!ev.kind.startsWith("ws-") || !ev.body?.startsWith("{")) return false;
   try {
     const msg = JSON.parse(ev.body);
     const parts = msg.type === "batch" && Array.isArray(msg.data) ? msg.data : [msg];
+    if (parts.map(isNewStateShape).some(Boolean)) return false;
     return parts.length > 0 && parts.every((m) => NOISY_TYPES.has(m?.type));
   } catch { return false; }
 }

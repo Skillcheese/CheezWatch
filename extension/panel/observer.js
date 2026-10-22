@@ -5,6 +5,8 @@ import { redact } from "../redact.js";
 
 // Only bodies of these types are read; game assets (images, audio, js) are skipped.
 const BODY_MIME = /json|text\/plain|text\/event-stream|text\/html/;
+// Binary or untyped bodies may hold encoded state (msgpack, protobuf); shown as hex if not UTF-8.
+const BINARY_MIME = /^$|octet-stream|msgpack|protobuf/;
 // Missing assets come back as HTML error pages; drop them by URL so they don't flood the log.
 // LPC character-sprite definitions (layers, variants, credits) are JSON but pure cosmetics.
 const SPRITE_DEF_URL = /\/LPC\//i;
@@ -23,10 +25,6 @@ function isSpriteDefinition(text) {
 
 function base64Bytes(b64) {
   return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
-}
-
-function decodeBase64(b64) {
-  return new TextDecoder().decode(base64Bytes(b64));
 }
 
 // Binary frames arrive base64-encoded. Show them as text when they are UTF-8,
@@ -50,7 +48,8 @@ export async function observeTab(tabId, emit, onDetach) {
     if (source.tabId !== tabId) return;
     switch (method) {
       case "Network.responseReceived":
-        if (BODY_MIME.test(params.response.mimeType) && !ASSET_URL.test(params.response.url) && !SPRITE_DEF_URL.test(params.response.url)) {
+        const mime = params.response.mimeType ?? "";
+        if ((BODY_MIME.test(mime) || BINARY_MIME.test(mime)) && !ASSET_URL.test(params.response.url) && !SPRITE_DEF_URL.test(params.response.url)) {
           pending.set(params.requestId, { url: params.response.url, status: params.response.status });
         }
         break;
@@ -60,9 +59,9 @@ export async function observeTab(tabId, emit, onDetach) {
         pending.delete(params.requestId);
         try {
           const { body, base64Encoded } = await dbg.sendCommand("Network.getResponseBody", { requestId: params.requestId });
-          const text = base64Encoded ? decodeBase64(body) : body;
-          if (isSpriteDefinition(text)) break;
-          emit({ kind: "http", ...meta, body: redact(text).slice(0, MAX_PREVIEW), time: Date.now() });
+          const frame = base64Encoded ? binaryFrame(body) : { body };
+          if (isSpriteDefinition(frame.body)) break;
+          emit({ kind: "http", ...meta, ...frame, body: redact(frame.body).slice(0, MAX_PREVIEW), time: Date.now() });
         } catch { /* body evicted from buffer; nothing to observe */ }
         break;
       }

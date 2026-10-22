@@ -10,6 +10,7 @@ Never record session tokens, cookies, emails, or other account secrets here.
 |---|---|---|---|---|
 | HTTP | JSON with `xpForLevel` / `perLevel` | Game load | Total XP needed per level, 1–120 (100+ only for slay/delve/fortify/luck). Level 99 = 50,000,000 XP | XP → level. Parsed by `extension/parsers/xp-table.js` |
 | WS in | `player_state` | For **every nearby player**, constantly; `path` only while moving. Hidden from the Traffic log | `path.speed` (px/s), `totalLevel`, `lifeLevel`, position | `movement_speed`. Parsed by `extension/parsers/player-state.js` |
+| WS in | `ledger_data` | On login / returning to the tab (`reason: "return"`, `awayMs`) | Full account snapshot: skills, bank, stats. `now` = current; `last`, `day`, `week` = older snapshots | **Skill levels + XP → role tiers.** Parsed by `extension/parsers/ledger.js` |
 | WS in | `batch` → `unlock_summaries` | Opening the **[Q] Unlocks** menu (sent twice in one batch) | Per-skill bonus lines from unlocks | Gather/process bonuses, move speed. Parsed by `extension/parsers/unlock-summaries.js` |
 
 ## Message shapes
@@ -33,6 +34,32 @@ Skill keys seen: combat `life spirit strike heft sight draw focus surge dodge de
 
 Lines are bonuses only; it carries **no skill levels, gauntlet role tiers, or backpack size**. Format is `<signed number><%|s|none> <label>`.
 
+### `ledger_data`
+
+Each snapshot (`now`, `last`, `day`, `week`) has the same keys (`v: 3`):
+
+| Key | Meaning |
+|---|---|
+| `at` | Snapshot time (ms) |
+| `sk` | `{ skill: [level, totalXp] }` for all 30 skills |
+| `tk` | Per-skill counts for gathering/processing skills only (meaning unconfirmed; maybe tasks or unlock tiers) |
+| `st` | Lifetime stats: `travelPx`, `teleports`, `potions`, `kills`, `deaths`, `food`, `chests`, `scrollSteps` |
+| `m` | Progress counters: `coll`, `quests`, `qsteps`, `diary`, `scrolls`, `credits`, `reroll`, … |
+| `rd` | Raid completions: `gauntlet`, `dire`, `fell`, `feeble`, `savage`, `ancient` |
+| `bk` | Bank item counts (includes `gold`, `bloodcoins`) |
+| `iv` | Inventory item counts |
+| `un` | Unlocked tools/upgrades (item id → 1) |
+| `pc` | Pets/capes per skill, `[0, 0]` pairs (meaning unconfirmed) |
+
+Also top-level `createdAt` (account creation) and `stepPx`.
+
+```json
+{ "type": "ledger_data", "data": { "reason": "return", "awayMs": 14862, "now": {
+  "v": 3, "at": 1792677533552,
+  "sk": { "fish": [44, 227557], "cook": [37, 108654], "...": [] },
+  "rd": { "gauntlet": 97 }, "iv": { "raw_squid": 11 } } } }
+```
+
 ## Mapping to Gauntlet Lab
 
 The Gauntlet is the **skilling** raid. Each role uses one gathering and one processing skill (`extension/parsers/gauntlet-roles.js`):
@@ -45,12 +72,12 @@ The Gauntlet is the **skilling** raid. Each role uses one gathering and one proc
 | Magic | invoke | imbue |
 | Defense | farm | brew |
 
-Tier = `floor(min(gather level, process level) / 10)`. Skill levels not yet located (likely sent once at login; see below).
+Tier = `floor(min(gather level, process level) / 10)`. Skill levels come from `ledger_data.now.sk`.
 
 | Gauntlet Lab field | Source message / field | Notes |
 |---|---|---|
 | `movement_speed` | `player_state.data.path.speed` | px/s; only present while moving |
 | `backpack_size` | _tbd_ | |
-| `role_stats[Role].tier` | _tbd_ | |
+| `role_stats[Role].tier` | `ledger_data.now.sk` | Via `roleTier()`; `extractLedger` returns `roleTiers` |
 | `gather_time` / `gather_success` / `double_gather` | _tbd_ | |
 | `process_time` / `process_success` | _tbd_ | |
