@@ -1,0 +1,3 @@
+[submodule "gauntlet_lab"]
+	path = gauntlet_lab
+	url = https://github.com/amulder87/gauntlet_lab.git
