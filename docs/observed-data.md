@@ -76,14 +76,15 @@ Tier = `floor(min(gather level, process level) / 10)`. Skill levels come from `l
 
 | Gauntlet Lab field | Source message / field | Notes |
 |---|---|---|
-| `movement_speed` | vigor level (`ledger_data`) + `all_skills.move_speed` (`unlock_summaries`) | Lab 10 = normal. 10 + vigor bonus + 10 × move_speed%. Vigor bonus is a line through 43 → +5.3, 65 → +7.6 (from the player; true curve unknown, inaccurate at low levels). Gear/potions not included. `player_state.path.speed` is exact but we can't tell which player is us yet |
+| `movement_speed` | vigor level (`ledger_data`) + `all_skills.move_speed` (`unlock_summaries`) | Lab 10 = normal. (10 + vigor bonus) × (1 + move_speed% + 15% first potion, always assumed active). Fits one reading from the player: vigor 56, +11.18% → 19.6 without the potion, 22.2 with it. The form and the 15% are inferred from that. The vigor slope comes from older readings (43 → +5.3, 65 → +7.6) that disagree with this one, so other levels are estimates. Gear not included. `player_state.path.speed` is exact but we can't tell which player is us yet |
 | `backpack_size` | `ledger_data.now.un` | 28 + 4 per satchel. No satchel unlocked yet; ids assumed to contain `satchel` (unconfirmed). `extender_t1` is something else |
 | `role_stats[Role].tier` | `ledger_data.now.sk` | Via `roleTier()`; `extractLedger` returns `roleTiers` |
 | `gather_time` / `gather_success` / `double_gather` | `unlock_summaries` | `roleStatsFromUnlocks()` in `lab-profile.js`. See assumptions below |
 | `process_time` / `process_success` | `unlock_summaries` | Same |
 
 Unlock → Gauntlet assumptions (from the player; unverified):
-- Base is Gauntlet Lab's T0: 1s, 75% success, 0% double.
-- Gauntlet actions take 1/10 of overworld time, so time = 1 + skill `duration` × 0.1. The per-skill `duration` line equals `all_durations` for every skill seen so far, so they are **not** summed.
-- Success = 75% + `all_skills.success` + skill `success`. Double = gather skill's `duplicate`.
+- Base is 1s and 0% double (Gauntlet Lab's T0), and 70% success (fitted to in-game fish 79%, cook 77%; also matches mine and smith 77%).
+- Gauntlet actions take 1/10 of overworld time, so time = 1 + (skill `duration` - 0.01 × (skill level - 1)) × 0.1. Matches in-game readings exactly: fish 54 → 8.11s, cook 52 → 8.33s, mine 49 → 8.36s, smith 40 → 8.45s.
+- Skill lines already include the global bonus, and equipped items too: the two lucky fishing items (-0.1s, +1% duplicate, +1% success each) account for fish's -1.36s vs -1.16s, +8.68% vs +6.68% and +9.18% vs +7.18%. They are **not** added again.
+- Success = 70% + skill `success`. Double = gather skill's `duplicate`.
 - Processing `save` has no Gauntlet Lab field and is ignored. Tier isn't used in these numbers.

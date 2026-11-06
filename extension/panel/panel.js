@@ -161,7 +161,7 @@ function loadSync() {
 }
 
 function syncLabMe() {
-  const { roleTiers, backpackSize, vigorLevel, unlocks } = loadSync();
+  const { roleTiers, backpackSize, vigorLevel, unlocks, skillLevels } = loadSync();
   const speed = vigorLevel ? movementSpeed(vigorLevel, unlocks) : undefined;
   let state;
   try { state = JSON.parse(localStorage.getItem(LAB_STORAGE_KEY)); } catch { return; }
@@ -171,7 +171,7 @@ function syncLabMe() {
     roleTiers && applyRoleTiers(state, roleTiers),
     applyBackpackSize(state, backpackSize),
     applyMovementSpeed(state, speed),
-    unlocks && applyUnlockStats(state, unlocks),
+    unlocks && applyUnlockStats(state, unlocks, skillLevels),
   ].some(Boolean);
   if (!changed) return;
   localStorage.setItem(LAB_STORAGE_KEY, JSON.stringify(state));
@@ -193,6 +193,7 @@ onObserved((ev) => {
     sync.roleTiers = ledger.roleTiers;
     if (ledger.backpackSize) sync.backpackSize = ledger.backpackSize;
     if (ledger.skills.vigor) sync.vigorLevel = ledger.skills.vigor.level;
+    sync.skillLevels = Object.fromEntries(Object.entries(ledger.skills).map(([skill, s]) => [skill, s.level]));
   }
   if (unlocks) sync.unlocks = unlocks;
   localStorage.setItem(SYNC_KEY, JSON.stringify(sync));

@@ -25,17 +25,34 @@ const unlocks = {
   cook: { duration: -1.06, save: 3.06, success: 6.81 },
 };
 
-test("scales duration cuts to Gauntlet time and adds global + skill success", () => {
+test("scales duration cuts to Gauntlet time and uses the skill's success line alone", () => {
   assert.deepEqual(roleStatsFromUnlocks(unlocks).Health, {
-    gather_time: 0.894, gather_success: 0.8481, double_gather: 0.0631,
-    process_time: 0.894, process_success: 0.8481,
+    gather_time: 0.894, gather_success: 0.7681, double_gather: 0.0631,
+    process_time: 0.894, process_success: 0.7681,
   });
+});
+
+test("time matches the in-game fish and cook readings at their levels", () => {
+  const { Health } = roleStatsFromUnlocks(
+    { fish: { duration: -1.36 }, cook: { duration: -1.16 } },
+    { fish: 54, cook: 52 },
+  );
+  assert.equal(Health.gather_time, 0.811);
+  assert.equal(Health.process_time, 0.833);
+});
+
+test("success matches the in-game fish and cook readings", () => {
+  const { Health } = roleStatsFromUnlocks({
+    all_skills: { success: 3 }, fish: { success: 9.18 }, cook: { success: 7.18 },
+  });
+  assert.equal(Math.round(Health.gather_success * 100), 79);
+  assert.equal(Math.round(Health.process_success * 100), 77);
 });
 
 test("falls back to global bonuses for skills without their own lines", () => {
   assert.deepEqual(roleStatsFromUnlocks(unlocks).Melee, {
-    gather_time: 0.894, gather_success: 0.78, double_gather: 0,
-    process_time: 0.894, process_success: 0.78,
+    gather_time: 0.894, gather_success: 0.73, double_gather: 0,
+    process_time: 0.894, process_success: 0.73,
   });
 });
 
@@ -55,14 +72,15 @@ test("sets backpack size only when it differs", () => {
   assert.equal(applyBackpackSize(state, undefined), false);
 });
 
-test("vigor bonus passes through the known points", () => {
-  assert.equal(Math.round(vigorSpeedBonus(43) * 100) / 100, 5.3);
-  assert.equal(Math.round(vigorSpeedBonus(65) * 100) / 100, 7.6);
+test("vigor bonus passes through the anchor and never goes negative", () => {
+  assert.equal(vigorSpeedBonus(56), 7.63);
+  assert.ok(vigorSpeedBonus(66) > vigorSpeedBonus(56));
+  assert.equal(vigorSpeedBonus(-100), 0);
 });
 
-test("movement speed adds vigor and the unlock percentage to base 10", () => {
-  assert.equal(movementSpeed(43, { all_skills: { move_speed: 7.81 } }), 16.1);
-  assert.equal(movementSpeed(43, null), 15.3);
+test("movement speed matches the in-game reading with the first potion", () => {
+  assert.equal(movementSpeed(56, { all_skills: { move_speed: 11.18 } }), 22.2);
+  assert.equal(movementSpeed(56, null), 20.3);
   const state = { profiles: { Me: { movement_speed: 10 } } };
   assert.equal(applyMovementSpeed(state, 16.1), true);
   assert.equal(applyMovementSpeed(state, 16.1), false);
