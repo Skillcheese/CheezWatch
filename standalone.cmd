@@ -2,7 +2,7 @@
 rem Screenshot import for Gauntlet Lab: builds what it needs, serves it on
 rem localhost and opens it in the browser. Close this window to stop.
 cd /d "%~dp0"
-if not exist extension\lab\index.html call npm run build:lab || goto :error
+if not exist standalone\lab\index.html call npm run build:lab || goto :error
 rem The Fortress icons came later, so their absence also means re-extract.
 if not exist standalone\icons\fort\satchel_t1.png (
   if not exist app.asar (

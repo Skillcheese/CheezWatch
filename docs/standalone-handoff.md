@@ -84,8 +84,8 @@ Formulas, as implemented in `standalone/calc.js`:
   - `readSkillsPanel(img, refs, templates)` → `{levels, total, checksum: ok|fixed|mismatch, warnings}`.
   - `readUnlocksPage(img, refs)` → `{owned: {skill: Set(rowIds)}, columns, rows, warnings}`.
   - `parseCollections(text)` → `{count,total,fraction}|null`.
-- `standalone/calc.js` (new): `unlockSummaries()` rebuilds the `unlock_summaries` shape from owned cells, then reuses `roleStatsFromUnlocks`, `roleTier` and `vigorBaseSpeed` from `extension/parsers/`. `computeProfile({owned, levels, collectorFraction, potion})` → `{roleTiers, roleStats, movementSpeed, unlocks}`. It ran end to end on the brown samples.
-- `extension/parsers/lab-profile.js` and its test, plus `docs/observed-data.md`: these were updated earlier (exact movement formula, 0.2 floor, 85% cap). 32 tests pass.
+- `standalone/calc.js` (new): `unlockSummaries()` rebuilds the `unlock_summaries` shape from owned cells, then reuses `roleStatsFromUnlocks`, `roleTier` and `vigorBaseSpeed` from `standalone/lib/`. `computeProfile({owned, levels, collectorFraction, potion})` → `{roleTiers, roleStats, movementSpeed, unlocks}`. It ran end to end on the brown samples.
+- `standalone/lib/lab-profile.js` and its test, plus `docs/observed-data.md`: these were updated earlier (exact movement formula, 0.2 floor, 85% cap). 32 tests pass.
 - Packages: dev `pngjs`, `@electron/asar`, `@napi-rs/canvas` (installed); deps `tesseract.js@5`, `@tesseract.js-data/eng`.
 
 ### Verified expected values (use in tests)
@@ -131,10 +131,10 @@ The screenshots can't show telescopes, compasses or equipped gear (Fortress item
    - Scratch drivers that already work: `all.mjs`, `read.mjs` in the old session scratchpad. Not needed, just a reference.
 2. ✅ **Collector OCR** (done). `standalone/vision/collections.js`: `collectionsRect` (in read-screens.js) crops the band above the section title, right half. `readCollections(img, rect, recognize)` binarizes and upscales at 5 settings (scale 2–5, threshold 0.4–0.6 between median and p99.5), with a char whitelist and PSM 7. A reading that matches the shown % wins; otherwise a ≥2 vote. The node test OCRs both samples correctly (~1s). Raw, un-preprocessed OCR was garbage.
 3. 🟡 **Page** (written, **not yet tried in a browser**): `standalone/index.html`, `standalone/app.js`. Paste goes to the highlighted box, then switches to the other one. Results auto-apply to Me and reload the iframe. Check: FontFace load, Tesseract worker paths, the card surviving Lab re-renders, and apply when the Lab has no saved state yet.
-   - `standalone/index.html` and `app.js` hold the Lab iframe (`../extension/lab/index.html`).
+   - `standalone/index.html` and `app.js` hold the Lab iframe (`lab/index.html`).
    - Inject an import card (two drop/paste zones, a potion select, status) at the top of the iframe's `#profiles-panel`. Re-insert it with a MutationObserver.
    - In the browser: decode images to ImageData via canvas; load the font via `new FontFace("ChakraPetchGame", url("icons/ChakraPetch-Bold.ttf"))`; load the icons from `standalone/icons/*.png`.
-   - Apply `applyRoleTiers`, the roleStats (like `applyUnlockStats`, but with precomputed stats, or pass `unlocks` straight into `applyUnlockStats(state, unlocks, levels)`) and `applyMovementSpeed` to the `gauntlet-lab-web-current-v3` localStorage state, then reload the iframe. See `syncLabMe` in `extension/panel/panel.js`.
+   - Apply `applyRoleTiers`, the roleStats (like `applyUnlockStats`, but with precomputed stats, or pass `unlocks` straight into `applyUnlockStats(state, unlocks, levels)`) and `applyMovementSpeed` to the `gauntlet-lab-web-current-v3` localStorage state, then reload the iframe. (The old extension panel did this; it has since been removed.)
    - Show what was detected (levels table, owned per skill, checksum status, warnings, the accuracy gap).
 4. ✅ **Offline serving** (done): `scripts/serve.js` (127.0.0.1:8787, `/` → `/standalone/`), `scripts/copy-tesseract.js` (`npm run build:standalone`), and `standalone.cmd` (CRLF; it also extracts the icons from app.asar if they are missing). Original plan:
    - `scripts/serve.js` (static node server for the repo root).

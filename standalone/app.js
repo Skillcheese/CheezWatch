@@ -10,7 +10,7 @@ import { FORTIFY_OCR_PARAMS, readFortifySummary } from "./vision/fortify-summary
 import { PERKS_OCR_PARAMS, readPerks } from "./vision/perks.js";
 import { classifyScreenshot, KINDS } from "./vision/classify.js";
 import { computeProfile, FORT_FAMILIES, FORT_TIERS, POTIONS } from "./calc.js";
-import { LAB_STORAGE_KEY, applyBackpackSize, applyMovementSpeed, applyRoleTiers, applyUnlockStats } from "../extension/parsers/lab-profile.js";
+import { LAB_STORAGE_KEY, applyBackpackSize, applyMovementSpeed, applyRoleTiers, applyUnlockStats } from "./lib/lab-profile.js";
 
 const FONT_FAMILY = "ChakraPetchGame";
 const POTION_LABELS = { none: "None", swift: "Swift (+15%)", fleet: "Fleet (+30%)", haste: "Haste (+50%)" };

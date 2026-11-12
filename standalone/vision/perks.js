@@ -8,7 +8,7 @@
 // part is drawn dim, so thresholds sit low. A reading is trusted once its
 // parts add up to the steps/sec it shows.
 import { binarize } from "./collections.js";
-import { vigorBaseSpeed } from "../../extension/parsers/lab-profile.js";
+import { vigorBaseSpeed } from "../lib/lab-profile.js";
 
 export const PERKS_OCR_PARAMS = { tessedit_pageseg_mode: "3" };
 // [upscale, threshold]; see binarize.

@@ -1,57 +1,38 @@
-# ScapeWatch Companion
+# CheezWatch
 
-A RuneLite-style companion for [ScapeWatch](https://scapewatch.com/), built as a Chrome extension. You play the game in a normal Chrome tab, and information tools appear in Chrome's side panel.
+A website for [ScapeWatch](https://scapewatch.com/) players that hosts [Gauntlet Lab](https://github.com/amulder87/gauntlet_lab), a simulator for the Gauntlet/Fortress minigame, and fills in your `Me` profile from screenshots.
 
-## The read-only rule
+Drop in screenshots of your Skills, Unlocks, Perks, Fortify and Fortress screens, and the page works out your role tiers, role stats, backpack size and movement speed, then loads them into the Lab.
 
-This extension **never** sends input, modifies game state, sends its own requests to the game server, or changes the game page in any way. It only reads what the browser already receives.
+**It doesn't connect to the game at all.** There is no browser extension, no injection and no network traffic to ScapeWatch. The page only reads the images you give it, in your own browser.
 
-How the code enforces it:
-
-- There are **no content scripts, no injected JS/CSS, no request blocking or rewriting**, and no web-accessible resources. Nothing from the extension runs in, or is visible to, the game page.
-- All observation goes through the Chrome DevTools Protocol (`chrome.debugger`), and every command passes through `extension/readonly-policy.js`. Its allowlist has two entries:
-  - `Network.enable`: subscribe to request, response, and WebSocket events
-  - `Network.getResponseBody`: read a body Chrome already buffered (this is a local read, not a network request)
-
-  Anything else (`Input.*`, `Runtime.evaluate`, `Page.*`, `Fetch.*`, cookie writes, …) throws. `npm test` checks this.
-
-Any change to `readonly-policy.js` should be reviewed carefully.
-
-While the panel is attached, Chrome shows a "started debugging this browser" banner. Only you can see it; the page can't detect it. Closing the banner detaches the observer.
-
-## Setup
+## Run it locally
 
 ```sh
-git clone --recurse-submodules <this repo>
-npm run build:lab   # or double-click build.cmd
-npm test
+git clone --recurse-submodules https://github.com/Skillcheese/CheezWatch.git
 ```
 
-Then in Chrome open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked**, and pick the `extension/` folder. Pin the extension and click its icon to open the side panel.
+Copy the game's `app.asar` into the repo root (its icons and font are extracted locally and never committed), then double-click `standalone.cmd`. It builds what's missing, serves the site on http://localhost:8787/ and opens it.
 
-**Usage:** open scapewatch.com, open the side panel (it attaches automatically), then reload the game tab so the panel sees traffic from the start.
-
-## Docs
-
-Start with `CLAUDE.md`, then see `docs/`: `architecture.md`, `gauntlet-lab.md`, `adding-features.md`, `observed-data.md`.
+```sh
+npm test              # formula and screenshot-reader tests
+npm run build:site    # bundle a static copy into site/ for any web host
+```
 
 ## Layout
 
 ```
-extension/
-  manifest.json        MV3 manifest
-  background.js        opens the side panel on icon click
-  readonly-policy.js   CDP allowlist (the safety boundary)
-  panel/               side panel UI (observer.js, Traffic log, Gauntlet Lab tab)
+standalone/          the website
+  index.html, app.js   page + Lab iframe
+  calc.js              screenshot readings → Gauntlet Lab profile
+  lib/                 role tiers and calibrated profile formulas
+  vision/              screenshot readers
   lab/                 built Gauntlet Lab (generated)
-gauntlet_lab/          upstream simulator (git submodule, amulder87/gauntlet_lab, AGPL-3.0)
+gauntlet_lab/        upstream simulator (git submodule, AGPL-3.0)
+scripts/             build, icon extraction, local server, site bundler
+samples/             test screenshots
+docs/                notes on Gauntlet Lab and game data
 ```
-
-## Roadmap
-
-1. Use the **Traffic** tab while playing to work out which responses and WebSocket messages carry player stats, Gauntlet tiers, and similar data.
-2. Write parsers that turn those observed messages into state (still read-only).
-3. Fill the Gauntlet Lab `Me` profile from that observed state, so you don't have to type it in.
 
 ## License
 

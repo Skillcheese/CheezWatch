@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { backpackSize, computeProfile, movementSpeed, unlockSummaries, fortBonuses, talentBonuses } from "./calc.js";
-import { vigorBaseSpeed } from "../extension/parsers/lab-profile.js";
+import { vigorBaseSpeed } from "./lib/lab-profile.js";
 
 const owned = (o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, new Set(v.split(" ").filter(Boolean))]));
 const close = (a, b) => assert.ok(Math.abs(a - b) < 1e-9, `${a} != ${b}`);

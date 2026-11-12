@@ -1,10 +1,10 @@
 // Turns what the screenshots show (owned unlock cells, skill levels, the
 // collection-log fraction) into Gauntlet Lab's Me profile. It rebuilds the
 // same per-skill bonus lines the game sends as `unlock_summaries`, so the
-// extension's calibrated formulas in lab-profile.js apply unchanged.
+// calibrated formulas in lab-profile.js apply unchanged.
 // Rules are from the game client's shared/Constants.js.
-import { ROLE_SKILLS, roleTier } from "../extension/parsers/gauntlet-roles.js";
-import { roleStatsFromUnlocks, vigorBaseSpeed } from "../extension/parsers/lab-profile.js";
+import { ROLE_SKILLS, roleTier } from "./lib/gauntlet-roles.js";
+import { roleStatsFromUnlocks, vigorBaseSpeed } from "./lib/lab-profile.js";
 import { speedWithPotion } from "./vision/perks.js";
 
 export const CAPE_PET_ROWS = ["pet", "shiny_pet", "cape", "trimmed_cape"];
