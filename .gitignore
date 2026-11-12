@@ -4,3 +4,9 @@ captures/
 *.log
 .DS_Store
 extension/lab/
+standalone/icons/
+standalone/vendor/
+site/
+app.asar
+eng.traineddata
+samples/Blue/

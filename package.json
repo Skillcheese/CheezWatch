@@ -7,6 +7,18 @@
   "license": "AGPL-3.0-or-later",
   "scripts": {
     "build:lab": "cd gauntlet_lab && npm install && npm run build && cd .. && node scripts/copy-lab.js",
-    "test": "node --test extension/readonly-policy.test.js extension/redact.test.js extension/parsers/*.test.js"
+    "build:standalone": "node scripts/copy-tesseract.js",
+    "serve": "node scripts/serve.js",
+    "test": "node --test extension/readonly-policy.test.js extension/redact.test.js extension/parsers/*.test.js standalone/*.test.js standalone/vision/*.test.js",
+    "build:site": "node scripts/bundle-site.js"
+  },
+  "devDependencies": {
+    "@electron/asar": "^3.4.1",
+    "@napi-rs/canvas": "^0.1.65",
+    "pngjs": "^7.0.0"
+  },
+  "dependencies": {
+    "@tesseract.js-data/eng": "^1.0.0",
+    "tesseract.js": "^5.1.1"
   }
 }
