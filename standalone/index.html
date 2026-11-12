@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CheezWatch</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #f5f7fa; }
+    body { display: flex; flex-direction: column; }
+    iframe { display: block; flex: 1; width: 100%; border: 0; }
+    footer { padding: 4px 12px; font: 12px system-ui, sans-serif; color: #555; border-top: 1px solid #dde2e8; }
+    footer a { color: #2a5db0; }
+  </style>
+  <script src="vendor/tesseract.min.js"></script>
+</head>
+<body>
+  <iframe id="lab" src="../extension/lab/index.html" title="CheezWatch"></iframe>
+  <footer>
+    CheezWatch source: <a href="https://github.com/Skillcheese/CheezWatch" target="_blank" rel="noopener">github.com/Skillcheese/CheezWatch</a>
+    · Built on <a href="https://github.com/amulder87/gauntlet_lab" target="_blank" rel="noopener">Gauntlet Lab</a> (AGPL-3.0)
+    · Not affiliated with ScapeWatch.
+  </footer>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
