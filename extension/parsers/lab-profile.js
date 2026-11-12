@@ -1,7 +1,7 @@
 // Maps parsed game data onto Gauntlet Lab's saved AppState. Only fields we
 // actually observe are touched; the rest of the user's Me profile is kept.
 
-import { ROLE_SKILLS } from "./gauntlet-roles.js";
+import { ROLE_SKILLS, roleTier } from "./gauntlet-roles.js";
 
 // Must match STORAGE_KEY in gauntlet_lab/src/app.ts.
 export const LAB_STORAGE_KEY = "gauntlet-lab-web-current-v3";
@@ -28,23 +28,21 @@ export function applyBackpackSize(state, size) {
   return true;
 }
 
-// Lab speed 10 is normal. Calibrated to one in-game reading: at vigor 56 with
-// +11.18% move speed, speed is 19.6 without the first potion and 22.2 with it.
-// That fits (10 + vigor bonus) * (1 + unlock% + potion%). Only the anchor is
-// measured: the per-level slope comes from older, less reliable readings.
-const BASE_SPEED = 10;
-const VIGOR_ANCHOR = { level: 56, bonus: 7.63 };
-const VIGOR_BONUS_PER_LEVEL = 2.3 / 22;
-const FIRST_POTION_PCT = 15;
+// Formulas below are from the game client's shared/Constants.js
+// (movementSpeed, totalMovementSpeed, MOVEMENT_POTIONS). Lab speed is px/s,
+// the same unit as the game, where 10 is normal.
+const SWIFT_POTION_PCT = 15;
 
-export function vigorSpeedBonus(level) {
-  return Math.max(0, VIGOR_ANCHOR.bonus + (level - VIGOR_ANCHOR.level) * VIGOR_BONUS_PER_LEVEL);
+/** Game's base speed for a vigor level, before percentage bonuses. */
+export function vigorBaseSpeed(level) {
+  const v = Math.max(0, level);
+  return 10 + (v + 1) * (0.1 + 0.0005 * v);
 }
 
-/** Lab movement speed from vigor and unlocks, assuming the first potion is active. */
+/** Lab movement speed from vigor and unlocks, assuming a Swift potion is active. */
 export function movementSpeed(vigorLevel, unlocks) {
-  const pct = (unlocks?.all_skills?.move_speed ?? 0) + FIRST_POTION_PCT;
-  return Math.round((BASE_SPEED + vigorSpeedBonus(vigorLevel)) * (1 + pct / 100) * 10) / 10;
+  const pct = (unlocks?.all_skills?.move_speed ?? 0) + SWIFT_POTION_PCT;
+  return Math.round(vigorBaseSpeed(vigorLevel) * (1 + pct / 100) * 10) / 10;
 }
 
 /** Sets Me's movement speed in `state` in place. Returns true if it changed. */
@@ -55,32 +53,45 @@ export function applyMovementSpeed(state, speed) {
   return true;
 }
 
-// Time and double are Gauntlet Lab's untiered baseline ("Generic T0"). Success
-// is calibrated to in-game fish 79% and cook 77%, not the lab's 75%.
-const BASE = { time: 1, success: 0.7, double: 0 };
-// Gauntlet actions take a tenth of the overworld time, so overworld duration
-// cuts shrink by the same factor.
-const GAUNTLET_TIME_SCALE = 0.1;
-const MIN_TIME = 0.05;
+// The game's rules (shared/Constants.js): overworld duration is
+// 10 - 0.01·(level - 1) minus every reduction, floored at 2.0s, and the
+// Gauntlet divides it by GAUNTLET_HASTE (10). Success is 70% + 1% per level
+// over the node's requirement + 1% per source; each 1% over 100 cuts 0.05s.
+// Reduction past the 2.0s floor turns into +3% double per second (gather).
+const BASE_DURATION = 10;
+const LEVEL_CUT = 0.01;
+const MIN_DURATION = 2.0;
+const GAUNTLET_HASTE = 10;
+const SUCCESS_BASE = 70;
+const OVERFLOW_SEC_PER_PCT = 0.05;
+const OVERFLOW_DOUBLE_PER_SEC = 3;
+const MAX_DOUBLE = 0.85;
+
+// Fortress node requirements per tier (nodes.json).
+const TIER_LEVELS = [1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 99];
+
+/** Level required by the Fortress node a role works at `tier`. */
+export function fortressNodeLevel(tier) {
+  return TIER_LEVELS[Math.max(0, Math.min(10, tier))];
+}
 
 const round = (v) => Math.round(v * 1e4) / 1e4;
 
-// Each skill level past 1 cuts overworld duration by this many seconds. Fits
-// fish 54 -> 8.11s and cook 52 -> 8.33s exactly.
-const LEVEL_CUT = 0.01;
-
-function skillStats(unlocks, skill, levels) {
+function skillStats(unlocks, skill, level, nodeLevel, gather) {
   const all = unlocks.all_skills ?? {};
   const own = unlocks[skill] ?? {};
   // A skill's "duration" and "success" lines already include the global bonus
   // (fish -1.36s vs all -1.16s), so the two are not added together.
-  const levelCut = LEVEL_CUT * Math.max(0, (levels?.[skill] ?? 1) - 1);
-  const cut = (own.duration ?? all.all_durations ?? 0) - levelCut;
-  const success = own.success ?? all.success ?? 0;
+  const rawSuccess = SUCCESS_BASE + Math.max(0, level - nodeLevel) + (own.success ?? all.success ?? 0);
+  const overflowSec = Math.max(0, rawSuccess - 100) * OVERFLOW_SEC_PER_PCT;
+  const base = BASE_DURATION - LEVEL_CUT * Math.max(0, level - 1);
+  const reduction = -(own.duration ?? all.all_durations ?? 0) + overflowSec;
+  const excess = Math.max(0, reduction - Math.max(0, base - MIN_DURATION));
+  const double = gather ? (own.duplicate ?? 0) + excess * OVERFLOW_DOUBLE_PER_SEC : 0;
   return {
-    time: round(Math.max(MIN_TIME, BASE.time + cut * GAUNTLET_TIME_SCALE)),
-    success: round(Math.min(1, BASE.success + success / 100)),
-    double: round(Math.min(1, BASE.double + (own.duplicate ?? 0) / 100)),
+    time: round(Math.max(MIN_DURATION, base - reduction) / GAUNTLET_HASTE),
+    success: round(Math.min(100, rawSuccess) / 100),
+    double: round(Math.min(MAX_DOUBLE, double / 100)),
   };
 }
 
@@ -88,8 +99,10 @@ function skillStats(unlocks, skill, levels) {
 export function roleStatsFromUnlocks(unlocks, levels) {
   const out = {};
   for (const [role, { gather, process }] of Object.entries(ROLE_SKILLS)) {
-    const g = skillStats(unlocks, gather, levels);
-    const p = skillStats(unlocks, process, levels);
+    const gl = levels?.[gather] ?? 1, pl = levels?.[process] ?? 1;
+    const nodeLevel = fortressNodeLevel(roleTier(role, gl, pl));
+    const g = skillStats(unlocks, gather, gl, nodeLevel, true);
+    const p = skillStats(unlocks, process, pl, nodeLevel, false);
     out[role] = {
       gather_time: g.time, gather_success: g.success, double_gather: g.double,
       process_time: p.time, process_success: p.success,

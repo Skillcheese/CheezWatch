@@ -28,7 +28,9 @@ export function extractLedger(payload) {
   }
   const roleTiers = {};
   for (const [role, { gather, process }] of Object.entries(ROLE_SKILLS)) {
-    if (skills[gather] && skills[process]) roleTiers[role] = roleTier(skills[gather].level, skills[process].level);
+    if (skills[process] && (role === "Defense" || skills[gather])) {
+      roleTiers[role] = roleTier(role, skills[gather]?.level ?? 1, skills[process].level);
+    }
   }
   const result = { at: now.at, skills, roleTiers };
   if (Number.isFinite(now.rd?.gauntlet)) result.gauntletRuns = now.rd.gauntlet;

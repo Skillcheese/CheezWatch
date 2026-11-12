@@ -1,7 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { applyMovementSpeed, movementSpeed, vigorSpeedBonus, applyBackpackSize, applyRoleTiers, applyUnlockStats, roleStatsFromUnlocks } from "./lab-profile.js";
+import { applyMovementSpeed, movementSpeed, vigorBaseSpeed, applyBackpackSize, applyRoleTiers, applyUnlockStats, roleStatsFromUnlocks, fortressNodeLevel } from "./lab-profile.js";
 
+const round4 = (v) => Math.round(v * 1e4) / 1e4;
 const stats = (tier) => ({ tier, gather_time: 3, gather_success: 0.9, double_gather: 0.1, process_time: 2, process_success: 0.9 });
 
 test("updates only changed tiers and keeps other stats", () => {
@@ -72,16 +73,41 @@ test("sets backpack size only when it differs", () => {
   assert.equal(applyBackpackSize(state, undefined), false);
 });
 
-test("vigor bonus passes through the anchor and never goes negative", () => {
-  assert.equal(vigorSpeedBonus(56), 7.63);
-  assert.ok(vigorSpeedBonus(66) > vigorSpeedBonus(56));
-  assert.equal(vigorSpeedBonus(-100), 0);
+test("vigor base speed follows the game formula", () => {
+  assert.ok(Math.abs(vigorBaseSpeed(1) - 10.201) < 1e-9);
+  assert.ok(Math.abs(vigorBaseSpeed(99) - 24.95) < 1e-9);
+  assert.equal(vigorBaseSpeed(-100), 10.1);
 });
 
-test("movement speed matches the in-game reading with the first potion", () => {
-  assert.equal(movementSpeed(56, { all_skills: { move_speed: 11.18 } }), 22.2);
-  assert.equal(movementSpeed(56, null), 20.3);
+test("movement speed adds unlock and Swift potion percentages", () => {
+  assert.equal(movementSpeed(56, { all_skills: { move_speed: 11.18 } }), 21.8);
+  assert.equal(movementSpeed(56, null), 19.9);
   const state = { profiles: { Me: { movement_speed: 10 } } };
   assert.equal(applyMovementSpeed(state, 16.1), true);
   assert.equal(applyMovementSpeed(state, 16.1), false);
+});
+
+test("Fortress node levels follow the tier", () => {
+  assert.equal(fortressNodeLevel(6), 60);
+  assert.equal(fortressNodeLevel(7), 70);
+  assert.equal(fortressNodeLevel(10), 99);
+});
+
+test("success over 100% speeds actions up by 0.05s per point", () => {
+  // Mine 69 on a T6 (level 60) node: 70 + 9 over + 33 sources = 112%, so -0.6s.
+  const { Melee } = roleStatsFromUnlocks(
+    { mine: { duration: -3, success: 33, duplicate: 30 }, smith: { duration: -3, success: 20 } },
+    { mine: 69, smith: 65 },
+  );
+  assert.equal(Melee.gather_success, 1);
+  assert.equal(Melee.gather_time, round4((10 - 0.68 - 3 - 0.6) / 10));
+  assert.equal(Melee.process_success, 0.95);
+  assert.equal(Melee.process_time, round4((10 - 0.64 - 3) / 10));
+});
+
+test("reduction past the 2.0s floor turns into double gather", () => {
+  const { Health } = roleStatsFromUnlocks({ fish: { duration: -9, duplicate: 10 } }, { fish: 99, cook: 99 });
+  assert.equal(Health.gather_time, 0.2);
+  // base 9.02, floor leaves 7.02 usable, 1.98s excess -> +5.94%.
+  assert.equal(Health.double_gather, round4(0.1 + 0.0594));
 });

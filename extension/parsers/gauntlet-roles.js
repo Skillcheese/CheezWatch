@@ -8,7 +8,11 @@ export const ROLE_SKILLS = {
   Defense: { gather: "farm",   process: "brew" },
 };
 
-/** Role tier is limited by the weaker of the role's two skills. */
-export function roleTier(gatherLevel, processLevel) {
-  return Math.floor(Math.min(gatherLevel, processLevel) / 10);
+/**
+ * Role tier is limited by the weaker of the role's two skills, except Defense,
+ * whose tier goes by brew alone (farm only has T0/T4/T8 nodes).
+ */
+export function roleTier(role, gatherLevel, processLevel) {
+  const level = role === "Defense" ? processLevel : Math.min(gatherLevel, processLevel);
+  return Math.floor(level / 10);
 }
