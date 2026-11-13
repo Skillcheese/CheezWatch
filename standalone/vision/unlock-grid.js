@@ -56,12 +56,20 @@ function frameScore(lum, w, h, x0, y0, size, bg) {
   return Math.min(top, Math.max(right, left)) - bg;
 }
 
+// A fractional pitch spreads each edge over neighbouring integer lags, which
+// can let a multiple of the pitch win; blurring the profile evens that out.
+function blur(signal, r) {
+  const out = new Float64Array(signal.length);
+  for (let i = 0; i < signal.length; i++) for (let d = -r; d <= r; d++) out[i] += signal[i + d] ?? 0;
+  return out;
+}
+
 function lattice(lum, w, h, region, fine) {
   const prof = gradientProfiles(lum, w, region);
   const minPitch = 12;
   const maxPitch = Math.max(minPitch + 1, Math.floor(Math.min(prof.cols.length, prof.rows.length) / 4));
-  const px = findPitch(prof.cols, minPitch, maxPitch);
-  const py = findPitch(prof.rows, minPitch, maxPitch);
+  const px = findPitch(blur(prof.cols, 2), minPitch, maxPitch);
+  const py = findPitch(blur(prof.rows, 2), minPitch, maxPitch);
   if (!px || !py || Math.abs(px - py) > Math.max(2, 0.08 * px)) throw new Error(NOT_FOUND);
   // Over the whole screenshot other UI muddies a fine fit, so the first pass
   // keeps the whole-pixel pitch.
