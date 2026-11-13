@@ -111,3 +111,13 @@ test("reduction past the 2.0s floor turns into double gather", () => {
   // base 9.02, floor leaves 7.02 usable, 1.98s excess -> +5.94%.
   assert.equal(Health.double_gather, round4(0.1 + 0.0594));
 });
+
+test("Defense gathers from the best farm node under its potion tier", async () => {
+  const { gatherNodeTier } = await import("./lab-profile.js");
+  assert.equal(gatherNodeTier("Defense", 7, 70), 4);
+  assert.equal(gatherNodeTier("Defense", 6, 60), 4);
+  assert.equal(gatherNodeTier("Defense", 3, 99), 0);
+  assert.equal(gatherNodeTier("Defense", 9, 85), 8);
+  assert.equal(gatherNodeTier("Defense", 9, 75), 4);
+  assert.equal(gatherNodeTier("Melee", 7, 70), 7);
+});

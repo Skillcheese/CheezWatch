@@ -95,14 +95,25 @@ function skillStats(unlocks, skill, level, nodeLevel, gather) {
   };
 }
 
+// Farm only has T0/T4/T8 nodes, so Defense brews its top potion from the
+// best herb at or below that tier (T7 potion ← T4 herb).
+const FARM_TIERS = [8, 4, 0];
+
+/** Tier of the gather node a role uses for its `tier` product. */
+export function gatherNodeTier(role, tier, gatherLevel) {
+  if (role !== "Defense") return tier;
+  const cap = Math.min(tier, Math.floor(gatherLevel / 10));
+  return FARM_TIERS.find((t) => t <= cap) ?? 0;
+}
+
 /** Gauntlet RoleStats (minus tier) per role, from parsed unlock_summaries and { skill: level }. */
 export function roleStatsFromUnlocks(unlocks, levels) {
   const out = {};
   for (const [role, { gather, process }] of Object.entries(ROLE_SKILLS)) {
     const gl = levels?.[gather] ?? 1, pl = levels?.[process] ?? 1;
-    const nodeLevel = fortressNodeLevel(roleTier(role, gl, pl));
-    const g = skillStats(unlocks, gather, gl, nodeLevel, true);
-    const p = skillStats(unlocks, process, pl, nodeLevel, false);
+    const tier = roleTier(role, gl, pl);
+    const g = skillStats(unlocks, gather, gl, fortressNodeLevel(gatherNodeTier(role, tier, gl)), true);
+    const p = skillStats(unlocks, process, pl, fortressNodeLevel(tier), false);
     out[role] = {
       gather_time: g.time, gather_success: g.success, double_gather: g.double,
       process_time: p.time, process_success: p.success,
