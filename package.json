@@ -9,9 +9,10 @@
     "build:lab": "cd gauntlet_lab && npm install && npm run build && cd .. && node scripts/copy-lab.js",
     "build:standalone": "node scripts/copy-tesseract.js",
     "serve": "node scripts/serve.js",
-    "test": "node --test standalone/*.test.js standalone/lib/*.test.js standalone/vision/*.test.js",
+    "test": "node --test standalone/*.test.js standalone/lib/*.test.js standalone/vision/*.test.js worker/feedback/*.test.js",
     "build:site": "node scripts/bundle-site.js",
-    "deploy": "node scripts/deploy-vps.js"
+    "deploy": "node scripts/deploy-vps.js",
+    "deploy:feedback": "cd worker/feedback && npx wrangler deploy"
   },
   "devDependencies": {
     "@electron/asar": "^3.4.1",

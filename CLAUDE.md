@@ -20,6 +20,7 @@ Nothing in this repo hooks into the game. No browser extension, no content scrip
 | `standalone/lab/` | Built Gauntlet Lab, copied in by `npm run build:lab`. Generated and gitignored. |
 | `gauntlet_lab/` | **Git submodule** (upstream: amulder87/gauntlet_lab, AGPL-3.0). TypeScript, built into `gauntlet_lab/dist/`. |
 | `scripts/` | `copy-lab.js`, `extract-icons.js` (from the game's `app.asar`), `copy-tesseract.js`, `serve.js` (localhost), `bundle-site.js` (→ `site/`). |
+| `worker/feedback/` | Cloudflare Worker behind `/api/feedback`: emails footer feedback to the owner. See `docs/feedback.md`. |
 | `standalone.cmd` | Double-click: builds what's missing, serves on localhost:8787 and opens it. |
 | `docs/` | Gauntlet Lab notes, game data notes, handoff notes. `docs/vps.md`: hosting the site on the shared VPS. |
 
@@ -31,6 +32,7 @@ npm run build:standalone  # copy tesseract into standalone/vendor
 npm run serve             # serve on localhost:8787
 npm run build:site        # static bundle in site/
 npm run deploy            # build site/ and push it to the VPS (--rollback to undo)
+npm run deploy:feedback   # deploy the feedback Worker (wrangler; see docs/feedback.md)
 npm test
 ```
 

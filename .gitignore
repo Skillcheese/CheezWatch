@@ -11,3 +11,4 @@ app.asar
 eng.traineddata
 samples/Blue/
 scripts/vps.env
+worker/feedback/.wrangler/
