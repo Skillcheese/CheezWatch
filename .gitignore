@@ -10,3 +10,4 @@ site/
 app.asar
 eng.traineddata
 samples/Blue/
+scripts/vps.env
