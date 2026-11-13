@@ -5,11 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>CheezWatch</title>
   <style>
-    html, body { margin: 0; height: 100%; background: #f5f7fa; }
+    html { color-scheme: dark; }
+    html.light { color-scheme: light; }
+    html, body { margin: 0; height: 100%; background: #1b1f24; color: #e4e7eb; }
+    html.light, html.light body { background: #f5f7fa; color: #000; }
     body { display: flex; flex-direction: column; }
     iframe { display: block; flex: 1; width: 100%; border: 0; }
-    footer { padding: 4px 12px; font: 12px system-ui, sans-serif; color: #555; border-top: 1px solid #dde2e8; }
-    footer a { color: #2a5db0; }
+    footer { padding: 4px 12px; font: 12px system-ui, sans-serif; color: #a3abb5; border-top: 1px solid #343a42; }
+    footer a { color: #7aa7f0; }
+    html.light footer { color: #555; border-top-color: #dde2e8; }
+    html.light footer a { color: #2a5db0; }
     #feedback { max-width: 420px; width: calc(100% - 32px); font: 14px system-ui, sans-serif; }
     #feedback h2 { margin: 0 0 8px; font-size: 16px; }
     #feedback label { display: block; margin-bottom: 8px; }
@@ -19,6 +24,7 @@
     #feedback-status { min-height: 1.2em; margin: 4px 0; }
     #feedback .buttons { text-align: right; }
   </style>
+  <script>try { if (localStorage.getItem("cheezwatch-theme") === "light") document.documentElement.classList.add("light"); } catch {}</script>
   <script src="vendor/tesseract.min.js"></script>
 </head>
 <body>
@@ -53,5 +59,6 @@
   </dialog>
   <script type="module" src="app.js"></script>
   <script type="module" src="feedback.js"></script>
+  <script type="module" src="theme.js"></script>
 </body>
 </html>
