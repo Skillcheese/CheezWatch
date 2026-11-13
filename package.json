@@ -10,7 +10,8 @@
     "build:standalone": "node scripts/copy-tesseract.js",
     "serve": "node scripts/serve.js",
     "test": "node --test standalone/*.test.js standalone/lib/*.test.js standalone/vision/*.test.js",
-    "build:site": "node scripts/bundle-site.js"
+    "build:site": "node scripts/bundle-site.js",
+    "deploy": "node scripts/deploy-vps.js"
   },
   "devDependencies": {
     "@electron/asar": "^3.4.1",

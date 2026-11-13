@@ -34,19 +34,28 @@ Public web traffic comes in through a **Cloudflare Tunnel** (`cloudflared`):
 - DNS for `nullptrscape.com` is on Cloudflare. Hostnames are added with `cloudflared tunnel route dns stellar-vps <hostname>`, which makes a proxied CNAME to `<tunnel-id>.cfargotunnel.com`.
 
 ## Adding the website (recommended setup)
-Not set up yet. The plan that fits the box:
+The server only serves static files; OCR, calcs and sims all run in the visitor's browser.
 
-1. **Files:** `npm run build:site` makes the static bundle in `site/`. Upload it to a release folder and flip a symlink, so a deploy is atomic and can be rolled back:
-   - `/srv/cheezwatch/releases/<yyyyMMdd-HHmmss>/` and `/srv/cheezwatch/current` → newest release. Keep the last 5.
-   - Upload with `scp -P $VPS_PORT -i ~/.ssh/stellar_deploy -r site/ $VPS_SSH:/tmp/cheezwatch-<stamp>`, then over ssh: `sudo mv` it into `releases/`, `sudo ln -sfn releases/<stamp> /srv/cheezwatch/current.tmp && sudo mv -T /srv/cheezwatch/current.tmp /srv/cheezwatch/current`.
-2. **Server:** a small static server bound to **127.0.0.1 only**, on a port the game doesn't use (e.g. `127.0.0.1:8090`). Caddy (`file_server`) or nginx both work; install from apt once. Point its root at `/srv/cheezwatch/current`. No TLS needed locally; Cloudflare terminates TLS.
-3. **Tunnel:** add an ingress rule to `/etc/cloudflared/config.yml` **above** the `http_status:404` catch-all:
+1. **Files:** releases live in `/srv/cheezwatch/releases/<yyyyMMdd-HHmmss>/` (root-owned, world-readable) and `/srv/cheezwatch/current` is a symlink to the live one. The last 5 are kept. Game icons (`standalone/icons/`) are part of the public bundle (still never committed).
+2. **Deploy:** `npm run deploy` runs `build:site`, scp's `site/` to `/tmp`, moves it into `releases/`, flips `current` atomically (`ln -sfn` + `mv -T`) and prunes. `npm run deploy -- --rollback` points `current` at the release before it. Reads `scripts/vps.env`, uses `BatchMode=yes`. No service restart needed.
+3. **Server:** `nginx-light`, `worker_processes 1`, distro default site removed so nothing listens on :80. `/etc/nginx/sites-available/cheezwatch` (symlinked into `sites-enabled`):
+   ```nginx
+   server {
+     listen 127.0.0.1:8090;
+     server_name _;
+     root /srv/cheezwatch/current;
+     index index.html;
+     add_header Cache-Control "no-cache" always;
+     location / { try_files $uri $uri/ =404; }
+   }
+   ```
+   `mime.types` must map `wasm` to `application/wasm`. The tesseract `.gz` is served as a plain file (no `Content-Encoding`).
+4. **Tunnel:** ingress rule in `/etc/cloudflared/config.yml` **above** the `http_status:404` catch-all:
    ```yaml
    - hostname: cheezwatch.nullptrscape.com
      service: http://localhost:8090
    ```
-   Then `cloudflared tunnel route dns stellar-vps cheezwatch.nullptrscape.com` and `sudo systemctl restart cloudflared`. Restarting cloudflared briefly drops game logins (`auth.nullptrscape.com`), so do it when that's acceptable and check afterwards that `https://auth.nullptrscape.com/api/Worlds` still returns **401**.
-4. **Deploy script:** add `scripts/deploy-vps.ps1` (or `.js`) that reads `scripts/vps.env`, runs `build:site`, uploads, flips `current`, prunes old releases, and has a `-Rollback` that points `current` at the previous release. No service restart is needed for content changes.
+   DNS via `cloudflared tunnel route dns stellar-vps cheezwatch.nullptrscape.com`. Restarting cloudflared briefly drops game logins, so check afterwards that `https://auth.nullptrscape.com/api/Worlds` still returns **401**.
 
 Hostname: `cheezwatch.nullptrscape.com` (same Cloudflare zone and account as the game, so it shares the `stellar-vps` tunnel).
 

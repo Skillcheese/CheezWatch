@@ -30,6 +30,7 @@ npm run build:lab         # build gauntlet_lab and copy it into standalone/lab
 npm run build:standalone  # copy tesseract into standalone/vendor
 npm run serve             # serve on localhost:8787
 npm run build:site        # static bundle in site/
+npm run deploy            # build site/ and push it to the VPS (--rollback to undo)
 npm test
 ```
 

@@ -17,6 +17,7 @@ Copy the game's `app.asar` into the repo root (its icons and font are extracted 
 ```sh
 npm test              # formula and screenshot-reader tests
 npm run build:site    # bundle a static copy into site/ for any web host
+npm run deploy        # build site/ and push it to the VPS (--rollback to undo)
 ```
 
 ## Layout
