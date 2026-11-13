@@ -10,6 +10,14 @@
     iframe { display: block; flex: 1; width: 100%; border: 0; }
     footer { padding: 4px 12px; font: 12px system-ui, sans-serif; color: #555; border-top: 1px solid #dde2e8; }
     footer a { color: #2a5db0; }
+    #feedback { max-width: 420px; width: calc(100% - 32px); font: 14px system-ui, sans-serif; }
+    #feedback h2 { margin: 0 0 8px; font-size: 16px; }
+    #feedback label { display: block; margin-bottom: 8px; }
+    #feedback select, #feedback textarea, #feedback input { display: block; width: 100%; box-sizing: border-box; font: inherit; margin-top: 2px; }
+    #feedback-count { float: right; color: #777; font-size: 12px; }
+    #feedback .hp { position: absolute; left: -9999px; }
+    #feedback-status { min-height: 1.2em; margin: 4px 0; }
+    #feedback .buttons { text-align: right; }
   </style>
   <script src="vendor/tesseract.min.js"></script>
 </head>
@@ -18,8 +26,32 @@
   <footer>
     CheezWatch source: <a href="https://github.com/Skillcheese/CheezWatch" target="_blank" rel="noopener">github.com/Skillcheese/CheezWatch</a>
     · Built on <a href="https://github.com/amulder87/gauntlet_lab" target="_blank" rel="noopener">Gauntlet Lab</a> (AGPL-3.0)
-    · Not affiliated with ScapeWatch.
-  </footer>
+    · Not affiliated with ScapeWatch.  </footer>
+  <dialog id="feedback">
+    <form method="dialog">
+      <h2>Send feedback</h2>
+      <label>Category
+        <select name="category">
+          <option value="bug">Bug</option>
+          <option value="idea">Idea</option>
+          <option value="other">Other</option>
+        </select>
+      </label>
+      <label>Message <span id="feedback-count">0/2000</span>
+        <textarea name="message" maxlength="2000" required rows="6"></textarea>
+      </label>
+      <label>Contact
+        <input name="contact" maxlength="100" placeholder="Discord or email (optional)">
+      </label>
+      <div class="hp" aria-hidden="true"><input name="website" tabindex="-1" autocomplete="off"></div>
+      <p id="feedback-status" role="status"></p>
+      <div class="buttons">
+        <button type="submit" formmethod="dialog" formnovalidate>Cancel</button>
+        <button type="submit">Send</button>
+      </div>
+    </form>
+  </dialog>
   <script type="module" src="app.js"></script>
+  <script type="module" src="feedback.js"></script>
 </body>
 </html>
