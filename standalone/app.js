@@ -11,6 +11,7 @@ import { PERKS_OCR_PARAMS, readPerks } from "./vision/perks.js";
 import { classifyScreenshot, KINDS } from "./vision/classify.js";
 import { computeProfile, FORT_FAMILIES, FORT_TIERS, POTIONS } from "./calc.js";
 import { dropsSection, mostLikelyWave } from "./lib/rare-drops.js";
+import { depositsSection } from "./lib/deposits.js";
 import { LAB_STORAGE_KEY, applyBackpackSize, applyMovementSpeed, applyRoleTiers, applyUnlockStats } from "./lib/lab-profile.js";
 
 const FONT_FAMILY = "ChakraPetchGame";
@@ -578,9 +579,18 @@ function addDrops(doc) {
   for (const pre of doc.querySelectorAll(".result-detail")) {
     if (pre.textContent.includes(DROPS_MARK)) continue;
     const best = mostLikelyWave(pre.textContent);
-    if (best) pre.append(doc.createTextNode(`
+    if (!best) continue;
+    let extra = `
 
-${dropsSection(best.wave, best.pct)}`));
+${dropsSection(best.wave, best.pct)}`;
+    try {
+      const state = JSON.parse(frame.contentWindow.localStorage.getItem("gauntlet-lab-web-current-v3"));
+      const deposits = depositsSection(frame.contentWindow.Gauntlet, state, pre.textContent, best.wave);
+      if (deposits) extra = `
+
+${deposits}${extra}`;
+    } catch (err) { console.warn("deposits", err); }
+    pre.append(doc.createTextNode(extra));
   }
 }
 
