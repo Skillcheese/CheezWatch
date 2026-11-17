@@ -11,7 +11,7 @@ const TIER_SUFFIX = { t1: "T1", t2: "T2", t3: "T3", t4: "T4", t5: "T5", c: "C6",
 const FAMILY_OF = {
   gauntlet_banner: "banner", gauntlet_ledger: "ledger",
   beacon_haste: "haste", beacon_swift: "swift", beacon_sure: "sure", beacon_bounty: "bounty", beacon_thrift: "thrift",
-  satchel: "satchel",
+  satchel: "satchel", enchanted_fortification: "fortification",
 };
 
 // Every item in the Fortress collection (Enchanted Fortification has no C7).

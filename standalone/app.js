@@ -12,7 +12,7 @@ import { classifyScreenshot, KINDS } from "./vision/classify.js";
 import { computeProfile, FORT_FAMILIES, FORT_TIERS, POTIONS } from "./calc.js";
 import { dropsSection, mostLikelyWave } from "./lib/rare-drops.js";
 import { depositsSection } from "./lib/deposits.js";
-import { LAB_STORAGE_KEY, applyBackpackSize, applyMovementSpeed, applyRoleTiers, applyUnlockStats } from "./lib/lab-profile.js";
+import { LAB_STORAGE_KEY, applyBackpackSize, applyMovementSpeed, applyRoleTiers, applyUnlockStats, applyXpBonus } from "./lib/lab-profile.js";
 
 const FONT_FAMILY = "ChakraPetchGame";
 const POTION_LABELS = { none: "None", swift: "Swift (+15%)", fleet: "Fleet (+30%)", haste: "Haste (+50%)" };
@@ -20,9 +20,13 @@ const POTION_KEY = "standalone-import-potion";
 const FORT_KEY = "standalone-import-fort";
 const TALENTS_KEY = "standalone-import-talents";
 const PERKS_KEY = "standalone-import-perks";
+const XP_LABELS = {
+  talents: "Fortify Tree", fort: "Fortress items", lanterns: "lanterns", capesPets: "capes & pets", telescopes: "telescopes", compasses: "compasses",
+};
 const FORT_LABELS = {
   ledger: "Ledgers", banner: "Banners", haste: "Haste Beacons", swift: "Swift Beacons",
   sure: "Sure Beacons", bounty: "Bounty Beacons", thrift: "Thrift Beacons", satchel: "Satchels",
+  fortification: "Enchanted Fortification",
 };
 const frame = document.getElementById("lab");
 
@@ -318,6 +322,7 @@ function apply() {
   applyUnlockStats(lab, profile.unlocks, s.levels);
   applyMovementSpeed(lab, profile.movementSpeed);
   if (state.fort.known) applyBackpackSize(lab, profile.backpackSize);
+  applyXpBonus(lab, profile.xp.total);
   localStorage.setItem(LAB_STORAGE_KEY, JSON.stringify(lab));
   state.applied = profile;
   // The Lab only reads its state on load; the card is re-added on load.
@@ -425,7 +430,7 @@ function fortPicker() {
     h("p", {}, "Filled from the Fortress screenshot, or click the tiers you own. They're remembered."),
     h("table", {}, FORT_FAMILIES.map((family) => h("tr", {},
       h("th", {}, FORT_LABELS[family]),
-      h("td", {}, FORT_TIERS.map((tier) => h("button", {
+      h("td", {}, FORT_TIERS.filter((t) => family !== "fortification" || t !== "C7").map((tier) => h("button", {
         type: "button",
         class: "swi-chip" + (state.fort[family].has(tier) ? " on" : ""),
         onclick: () => {
@@ -452,7 +457,10 @@ function details() {
           h("td", {}, r.process_time.toFixed(3)), h("td", {}, pct(r.process_success)))),
       ),
       h("p", {}, `Movement speed ${p.movementSpeed} (${POTION_LABELS[state.potion]} potion).`
-        + (state.fort.known ? ` Backpack ${p.backpackSize} slots.` : ""))));
+        + (state.fort.known ? ` Backpack ${p.backpackSize} slots.` : "")),
+      h("p", {}, `Fortify XP +${p.xp.total}%: `
+        + Object.entries(XP_LABELS).map(([k, label]) => `${label} ${p.xp.parts[k]}%`).join(", ")
+        + ". Slates, medallions and quest bonuses aren't read.")));
   }
   if (s) {
     parts.push(h("details", { "data-key": "levels" }, h("summary", {}, "Levels read"),

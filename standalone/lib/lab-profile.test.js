@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { applyMovementSpeed, movementSpeed, vigorBaseSpeed, applyBackpackSize, applyRoleTiers, applyUnlockStats, roleStatsFromUnlocks, fortressNodeLevel } from "./lab-profile.js";
+import { applyMovementSpeed, movementSpeed, vigorBaseSpeed, applyBackpackSize, applyRoleTiers, applyUnlockStats, roleStatsFromUnlocks, fortressNodeLevel, applyXpBonus } from "./lab-profile.js";
 
 const round4 = (v) => Math.round(v * 1e4) / 1e4;
 const stats = (tier) => ({ tier, gather_time: 3, gather_success: 0.9, double_gather: 0.1, process_time: 2, process_success: 0.9 });
@@ -120,4 +120,13 @@ test("Defense gathers from the best farm node under its potion tier", async () =
   assert.equal(gatherNodeTier("Defense", 9, 85), 8);
   assert.equal(gatherNodeTier("Defense", 9, 75), 4);
   assert.equal(gatherNodeTier("Melee", 7, 70), 7);
+});
+
+test("xp bonus scales the Lab's per-action Fortify XP", () => {
+  const state = { game: { action_xp_base: 1, action_xp_wave_slope: 0.36 } };
+  assert.ok(applyXpBonus(state, 25));
+  assert.equal(state.game.action_xp_base, 1.25);
+  assert.equal(state.game.action_xp_wave_slope, 0.45);
+  applyXpBonus(state, 0);
+  assert.equal(state.game.action_xp_base, 1);
 });

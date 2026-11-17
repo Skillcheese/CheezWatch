@@ -14,7 +14,8 @@ export const POTIONS = { none: 0, swift: 0.15, fleet: 0.3, haste: 0.5 };
 // Fortress (Gauntlet) unlocks: seven tiers per family, bonuses scale with
 // the tier's position (T1 = 1 ... C7 = 7). See docs/fort-items.md.
 // Satchels give no stat bonus; each owned tier adds backpack slots.
-export const FORT_FAMILIES = ["ledger", "banner", "haste", "swift", "sure", "bounty", "thrift", "satchel"];
+// Enchanted Fortification (the Fortify tool) only gives XP; it has no C7.
+export const FORT_FAMILIES = ["ledger", "banner", "haste", "swift", "sure", "bounty", "thrift", "satchel", "fortification"];
 export const FORT_TIERS = ["T1", "T2", "T3", "T4", "T5", "C6", "C7"];
 const FORT = { ledgerSeconds: 0.1, milestoneMove: 0.0025, hasteSeconds: 0.05, swiftMove: 0.005 };
 // Constants.INVENTORY_SLOTS and SATCHEL_SLOTS_PER.
@@ -104,6 +105,41 @@ export function unlockSummaries({ owned, levels, collectorFraction = 0, fort, ta
   return out;
 }
 
+// XP bonuses, in percent (Constants.js). The game stacks them additively.
+const BEACONS = ["haste", "swift", "sure", "bounty", "thrift"];
+const XP = {
+  milestonePerTier: 0.25, beacon: 0.25,
+  // Fortify reads the doubled tool curve (DOUBLED_TOOL_SKILLS).
+  fortification: { T1: 1, T2: 2, T3: 3, T4: 4, T5: 5, C6: 6 },
+  lantern: { T1: 0.5, T2: 1, T3: 1.5, T4: 2, T5: 2.5, C6: 3, D1: 0.5, L1: 0.5, D2: 1, L2: 1 },
+  capePet: { pet: 0.25, cape: 0.25, shiny_pet: 0.5, trimmed_cape: 0.5 },
+};
+
+/**
+ * Fortify XP bonus in percent, from everything the screenshots show:
+ * { total, parts: { talents, fort, lanterns, capesPets, telescopes, compasses } }.
+ * Telescopes and compasses give half their movement bonus as XP, so the
+ * Perks line gives both. Per-skill capes and pets of the gather skills don't
+ * count: the underlying skill earns nothing in the Fortress.
+ */
+export function xpBonus({ owned = {}, fort = {}, talents = {}, perks } = {}) {
+  const tiers = (family) => [...(fort[family] ?? [])];
+  const sum = (a) => a.reduce((x, y) => x + y, 0);
+  const rows = (set, table) => sum([...(set ?? [])].map((r) => table[r] ?? 0));
+  const parts = {
+    talents: (talents.fortifyXpPct ?? 0) + (talents.globalXpPct ?? 0) + (talents.skillingXpPct ?? 0),
+    fort: sum(["ledger", "banner"].flatMap(tiers).map((t) => (FORT_TIERS.indexOf(t) + 1) * XP.milestonePerTier))
+      + sum(BEACONS.map((f) => tiers(f).length)) * XP.beacon
+      + sum(tiers("fortification").map((t) => XP.fortification[t] ?? 0)),
+    lanterns: rows(owned.levels, XP.lantern),
+    capesPets: rows(owned.levels, XP.capePet) + rows(owned.fortify, XP.capePet),
+    telescopes: (perks?.bonusPct?.telescopes ?? 0) / 2,
+    compasses: (perks?.bonusPct?.compasses ?? 0) / 2,
+  };
+  for (const k of Object.keys(parts)) parts[k] = round2(parts[k]);
+  return { total: round2(sum(Object.values(parts))), parts };
+}
+
 /** Movement speed in px/s from vigor, the active potion, the collector, Fortress items and Fleet Foot. */
 export function movementSpeed(vigorLevel, potion = "none", collectorFraction = 0, fort, talents) {
   const bonus = (POTIONS[potion] ?? 0) + COLLECTOR.move * collectorFraction + fortBonuses(fort).move + talentBonuses(talents).move;
@@ -117,7 +153,7 @@ export function backpackSize(fort) {
 
 /**
  * Everything the Lab's Me profile needs from the screenshots:
- * { roleTiers, roleStats, movementSpeed, backpackSize, unlocks }.
+ * { roleTiers, roleStats, movementSpeed, backpackSize, unlocks, xp }.
  * `perks` (vision/perks.js) is the game's own movement breakdown, telescopes
  * and compasses included; when given, it replaces the estimate.
  */
@@ -135,5 +171,6 @@ export function computeProfile({ owned, levels, collectorFraction = 0, potion = 
       : movementSpeed(levels.vigor ?? 0, potion, collectorFraction, fort, talents),
     backpackSize: backpackSize(fort),
     unlocks,
+    xp: xpBonus({ owned, fort, talents, perks }),
   };
 }

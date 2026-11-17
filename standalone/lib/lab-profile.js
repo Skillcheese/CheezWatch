@@ -28,6 +28,22 @@ export function applyBackpackSize(state, size) {
   return true;
 }
 
+// Factory Fortify XP constants (Constants.FORTIFY_XP_BASE / _PER_WAVE).
+const XP_BASE = 1.0, XP_PER_WAVE = 0.36;
+
+/**
+ * Scales the Lab's per-action Fortify XP by the player's XP bonus (percent).
+ * The run-end bonus (wave²) isn't scaled; the Lab has no setting for it.
+ */
+export function applyXpBonus(state, pct) {
+  const g = state?.game;
+  if (!g || !Number.isFinite(pct)) return false;
+  const m = 1 + pct / 100;
+  g.action_xp_base = Math.round(XP_BASE * m * 1e6) / 1e6;
+  g.action_xp_wave_slope = Math.round(XP_PER_WAVE * m * 1e6) / 1e6;
+  return true;
+}
+
 // Formulas below are from the game client's shared/Constants.js
 // (movementSpeed, totalMovementSpeed, MOVEMENT_POTIONS). Lab speed is px/s,
 // the same unit as the game, where 10 is normal.

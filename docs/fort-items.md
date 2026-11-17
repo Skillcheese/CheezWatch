@@ -16,7 +16,7 @@ Every family has 7 tiers: T1–T5, then Chaos C6 and C7. In `items.json`, the `t
 | Bounty Beacon | `beacon_bounty_*` | +1% double-gather (one double source) | +7% |
 | Thrift Beacon | `beacon_thrift_*` | +0.5% material save | not modelled (Gauntlet Lab has no save stat) |
 
-Every beacon also gives +0.25% XP, and Ledgers and Banners give +0.25% × (i+1) XP. XP isn't a Lab stat, so it's ignored.
+Every beacon also gives +0.25% XP, Ledgers and Banners give +0.25% × (i+1) XP, and the Enchanted Fortification (the Fortify tool, T1–C6) gives +1% × (i+1). `calc.js` `xpBonus` adds these to the Fortify Tree, lantern, cape/pet, telescope and compass XP, and the page scales the Lab's per-action XP by the total.
 
 How these combine with the rest of the formulas (from `Constants.js`):
 - The seconds from Ledgers and Haste Beacons are **flat reductions** (`flatReduction` in `actionDurationFinal`). They are not cape/pet sources, so the cap of 8 sources doesn't apply to them. They still respect the 2.0s floor, which becomes 0.2s in the Gauntlet.

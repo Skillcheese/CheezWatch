@@ -32,7 +32,7 @@ test("reads the blue Fortress collection", { skip }, () => {
   assert.deepEqual(plain(r.owned), {
     banner: ["T1", "T2", "T3", "T4"], ledger: ["T1", "T2", "T3", "T4"],
     haste: ["T1", "T2", "T3"], bounty: ["T1", "T2", "T3"], thrift: ["T1", "T2", "T3", "T4"],
-    sure: ["T1", "T2", "T3"], swift: ["T1", "T2"], satchel: ["T1", "T2"],
+    sure: ["T1", "T2", "T3"], swift: ["T1", "T2"], satchel: ["T1", "T2"], fortification: ["T1", "T2", "T3"],
   });
 });
 
@@ -42,7 +42,7 @@ test("reads the brown Fortress collection", { skip }, () => {
   assert.ok(r.items.every((i) => i.id));
   assert.deepEqual(plain(r.owned), {
     banner: ["T1", "T2"], ledger: ["T1", "T2"], haste: ["T1", "T2"],
-    bounty: ["T1"], thrift: ["T1"], sure: ["T1"], swift: ["T1"], satchel: ["T1", "T2"],
+    bounty: ["T1"], thrift: ["T1"], sure: ["T1"], swift: ["T1"], satchel: ["T1", "T2"], fortification: ["T1"],
   });
 });
 

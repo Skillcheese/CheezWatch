@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { backpackSize, computeProfile, movementSpeed, unlockSummaries, fortBonuses, talentBonuses } from "./calc.js";
+import { backpackSize, computeProfile, movementSpeed, unlockSummaries, fortBonuses, talentBonuses, xpBonus } from "./calc.js";
 import { vigorBaseSpeed } from "./lib/lab-profile.js";
 
 const owned = (o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, new Set(v.split(" ").filter(Boolean))]));
@@ -100,4 +100,21 @@ test("the Perks movement line replaces the movement estimate", () => {
   const base = { owned: {}, levels: { vigor: 69 }, perks };
   assert.equal(computeProfile(base).movementSpeed, 26.8);
   assert.equal(computeProfile({ ...base, potion: "haste" }).movementSpeed, 37.5);
+});
+
+test("xp bonus adds every source the screenshots show", () => {
+  const x = xpBonus({
+    owned: owned({ levels: "pet shiny_pet T1 C6 L2", fish: "cape" }),
+    fort: fort({ ledger: "T1 C7", banner: "T2", haste: "T1 T2", thrift: "T1", fortification: "T1 C6" }),
+    talents: { fortifyXpPct: 4, globalXpPct: 3, skillingXpPct: 1.75 },
+    perks: { bonusPct: { telescopes: 9.5, compasses: 1 } },
+  });
+  close(x.parts.talents, 8.75);
+  close(x.parts.fort, (1 + 7 + 2) * 0.25 + 3 * 0.25 + 1 + 6);
+  close(x.parts.lanterns, 0.5 + 3 + 1);
+  close(x.parts.capesPets, 0.75);
+  close(x.parts.telescopes, 4.75);
+  close(x.parts.compasses, 0.5);
+  close(x.total, 8.75 + 10.25 + 4.5 + 0.75 + 4.75 + 0.5);
+  close(xpBonus().total, 0);
 });
