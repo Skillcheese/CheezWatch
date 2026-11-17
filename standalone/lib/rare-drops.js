@@ -52,23 +52,22 @@ export function mostLikelyWave(text) {
 const pct = (x) => `${(100 * x).toFixed(2)}%`;
 
 export function dropsSection(wave, pctOfRuns) {
-  const head = ["Tier", "Rolls", "This wave", "≥1 by now", "Expected", "Avg/hr", "Now/hr", "50%", "90%", "99%"];
-  const widths = [5, 6, 10, 10, 9, 7, 7, 5, 5, 5];
+  const head = ["Tier", "This wave", "≥1 by now", "Expected", "Avg/hr"];
+  const widths = [5, 10, 10, 9, 7];
   const row = (cells) => cells.map((c, i) => String(c)[i ? "padStart" : "padEnd"](widths[i])).join(" ");
   const lines = [
     `RARE DROPS AT WAVE ${wave} (most likely, ${pctOfRuns.toFixed(2)}% of runs)`,
     "----------------------------------------------",
     row(head),
   ];
-  let exp = 0, avg = 0, now = 0;
+  let exp = 0, avg = 0;
   for (const t of TIERS) {
     const s = tierStats(t, wave);
-    exp += s.expected; avg += s.perHourAvg; now += s.perHourAtWave;
-    lines.push(row([t.name, s.rolls, pct(s.chanceThisWave), pct(s.atLeastOne), s.expected.toFixed(3),
-      s.perHourAvg.toFixed(3), s.perHourAtWave.toFixed(3), waveFor(t, 0.5), waveFor(t, 0.9), waveFor(t, 0.99)]));
+    exp += s.expected; avg += s.perHourAvg;
+    lines.push(row([t.name, pct(s.chanceThisWave), pct(s.atLeastOne), s.expected.toFixed(3),
+      s.perHourAvg.toFixed(3)]));
   }
-  lines.push(row(["All", "", "", "", exp.toFixed(3), avg.toFixed(3), now.toFixed(3), "", "", ""]));
-  lines.push("", `Each band's chance per wave grows by ${(100 * DROP_BASE).toFixed(5)}% a wave and stops at ${pct(DROP_BASE * CAP_L)} (${CAP_L} waves in).`,
-    "50/90/99%: wave by which that band has given at least one drop with that chance.");
+  lines.push(row(["All", "", "", exp.toFixed(3), avg.toFixed(3)]));
+  lines.push("", `Each band's chance per wave grows by ${(100 * DROP_BASE).toFixed(5)}% a wave and stops at ${pct(DROP_BASE * CAP_L)} (${CAP_L} waves in).`);
   return lines.join("\n");
 }
