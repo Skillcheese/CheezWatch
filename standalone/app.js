@@ -10,6 +10,7 @@ import { FORTIFY_OCR_PARAMS, readFortifySummary } from "./vision/fortify-summary
 import { PERKS_OCR_PARAMS, readPerks } from "./vision/perks.js";
 import { classifyScreenshot, KINDS } from "./vision/classify.js";
 import { computeProfile, FORT_FAMILIES, FORT_TIERS, POTIONS } from "./calc.js";
+import { dropsSection, mostLikelyWave } from "./lib/rare-drops.js";
 import { LAB_STORAGE_KEY, applyBackpackSize, applyMovementSpeed, applyRoleTiers, applyUnlockStats } from "./lib/lab-profile.js";
 
 const FONT_FAMILY = "ChakraPetchGame";
@@ -570,6 +571,19 @@ function rebrand(doc) {
   }
 }
 
+// The Lab rewrites the selected result's text on every row click, so the
+// drops are appended again whenever the marker is missing.
+const DROPS_MARK = "RARE DROPS AT WAVE";
+function addDrops(doc) {
+  for (const pre of doc.querySelectorAll(".result-detail")) {
+    if (pre.textContent.includes(DROPS_MARK)) continue;
+    const best = mostLikelyWave(pre.textContent);
+    if (best) pre.append(doc.createTextNode(`
+
+${dropsSection(best.wave, best.pct)}`));
+  }
+}
+
 function attach() {
   const doc = frame.contentDocument;
   if (!doc?.body) return;
@@ -582,6 +596,7 @@ function attach() {
   new MutationObserver(() => {
     if (!doc.getElementById("swi-card")) render();
     rebrand(doc);
+    addDrops(doc);
   }).observe(doc.body, { childList: true, subtree: true });
   doc.addEventListener("paste", onPaste);
 }
