@@ -21,6 +21,14 @@ test("parses the Total Movement Speed line", () => {
   assert.equal(parseMovementLine("Compasses +0% XP"), null);
 });
 
+test("parses a whole-number steps/sec", () => {
+  const r = parseMovementLine("Total Movement Speed +180% (28 steps/sec) (Vigor lvl 72 (effective 84) base, +10.5% telescopes, +1% compasses (2/11), +1.5% swift beacons, +5% fortress milestones, +5.2% collector, +4% fleet foot)");
+  assert.equal(r.stepsPerSec, 28);
+  assert.equal(r.effectiveVigor, 84);
+  assert.equal(r.bonusPct.telescopes, 10.5);
+  assert.equal(r.consistent, true);
+});
+
 // The potion boxes next to the line show 26.8 / 30 / 33.2 / 37.5 (blue) and
 // 20.4 / 23.1 / 25.8 / 29.4 (brown). The game truncates them to one decimal.
 const EXPECTED = {

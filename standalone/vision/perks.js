@@ -32,7 +32,7 @@ const num = (s) => Number(s.replace(",", "."));
 export function parseMovementLine(text) {
   const line = (text ?? "").split("\n").find((l) => /Total\s+Mov/i.test(l));
   if (!line) return null;
-  const steps = /(\d{1,2}[.,]\d)\s*steps/i.exec(line);
+  const steps = /(\d{1,2}(?:[.,]\d)?)\s*steps/i.exec(line);
   if (!steps) return null;
   const total = /Speed\s*\+?(\d{1,3})\s*%/i.exec(line);
   const vigor = /Vigor\s*\S{0,4}\s*(\d{1,2})\b/i.exec(line);
