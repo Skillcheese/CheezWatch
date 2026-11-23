@@ -12,6 +12,7 @@ import { classifyScreenshot, KINDS } from "./vision/classify.js";
 import { computeProfile, FORT_FAMILIES, FORT_TIERS, POTIONS } from "./calc.js";
 import { dropsSection, mostLikelyWave } from "./lib/rare-drops.js";
 import { depositsSection } from "./lib/deposits.js";
+import { mountSwapCard } from "./swap.js";
 import { LAB_STORAGE_KEY, applyBackpackSize, applyMovementSpeed, applyRoleTiers, applyUnlockStats, applyXpBonus } from "./lib/lab-profile.js";
 
 const FONT_FAMILY = "ChakraPetchGame";
@@ -610,9 +611,11 @@ function attach() {
   win.alert = (msg) => alert(String(msg).replace(/Gauntlet Lab/g, BRAND));
   rebrand(doc);
   render();
+  mountSwapCard(doc);
   // The Lab rebuilds the Profiles tab from scratch on every change.
   new MutationObserver(() => {
     if (!doc.getElementById("swi-card")) render();
+    mountSwapCard(doc);
     rebrand(doc);
     addDrops(doc);
   }).observe(doc.body, { childList: true, subtree: true });
