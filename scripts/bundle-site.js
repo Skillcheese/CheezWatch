@@ -27,3 +27,23 @@ for (const need of ["standalone/lab/index.html", "standalone/vendor/tesseract.mi
 fs.rmSync(out, { recursive: true, force: true });
 copyDir("standalone", out);
 console.log(`Site bundled into ${path.relative(process.cwd(), out)}/`);
+
+// Cloudflare caches files in the browser for hours whatever the server says,
+// so each bundle stamps its script and style URLs; a deploy then never mixes
+// old and new modules.
+const stamp = Date.now().toString(36);
+const relative = /(["'])((?:\.{1,2}\/|lab\/)?[\w./-]+?\.(?:js|css))\1/g;
+const tag = (text) => text.replace(relative, (m, q, url) => /^(https?:|\/)/.test(url) ? m : `${q}${url}?v=${stamp}${q}`);
+const stampDir = (dir) => {
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    const file = path.join(dir, e.name);
+    if (e.isDirectory()) { if (e.name !== "vendor" && e.name !== "icons") stampDir(file); continue; }
+    if (/\.html$/.test(e.name)) {
+      fs.writeFileSync(file, fs.readFileSync(file, "utf8").replace(/((?:src|href)=)"(?!https?:|\/|#)([\w./-]+\.(?:js|css))"/g, `$1"$2?v=${stamp}"`));
+    } else if (/\.js$/.test(e.name) && dir !== path.join(out, "lab")) {
+      fs.writeFileSync(file, tag(fs.readFileSync(file, "utf8")));
+    }
+  }
+};
+stampDir(out);
+console.log(`Stamped script URLs with v=${stamp}`);
