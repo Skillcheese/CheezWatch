@@ -1,8 +1,9 @@
-// "Role swap" card in the Lab's Experiment tab: finds when Me should change
-// role once (everyone else keeps their current role) to get the most wave
-// or the most deposits out of Me.
+// "Role swap" card in the Lab's Experiment tab: finds the best roles for the
+// whole party together with one role change for Me (start role, new role,
+// and how much Me deposits before switching), for the most waves or the
+// most deposits out of Me.
 import { LAB_STORAGE_KEY } from "./lib/lab-profile.js";
-import { candidatePlans, emptyStats, mergeStats, summarize } from "./lib/swap-sim.js";
+import { candidatePlans, emptyStats, meetsRequirements, mergeStats, spread, summarize } from "./lib/swap-sim.js";
 
 const ROLES = ["Health", "Melee", "Ranged", "Magic", "Defense"];
 const OBJECTIVES = { wave: "Mean wave cleared", deposits: "Me's total deposits" };
@@ -60,37 +61,73 @@ async function optimize(rerender) {
   const party = lab?.party ?? [];
   let meIndex = party.findIndex((s) => s.profile_name === "Me");
   if (meIndex < 0) meIndex = party.findIndex((s) => s.is_real_player);
-  if (meIndex < 0) { ui.status = "Put Me in one of the party slots first."; rerender(); return; }
-  const setup = {
-    profiles: party.map((s) => lab.profiles[s.profile_name]),
-    roles: party.map((s) => s.manual_role),
-    meIndex,
-    cfg: lab.game,
-  };
+  const G = labDoc?.defaultView?.Gauntlet;
+  if (meIndex < 0 || !G) { ui.status = "Put Me in one of the party slots first."; rerender(); return; }
+  const setup = { profiles: party.map((s) => lab.profiles[s.profile_name]), meIndex, cfg: lab.game };
   const opt = lab.optimizer, objective = ui.objective;
+  // Every distinct set of roles for the other slots (identical stand-ins
+  // deduplicated by the Lab's own enumeration); Me's entry is filled per plan.
+  const loose = { ...lab, optimizer: { ...opt, require_health: false, require_force: false } };
+  const teams = G.enumerateUniqueAssignments(loose).filter((r) => r[meIndex] === ROLES[0]);
+  const allowed = (plans) => plans.filter((p) => meetsRequirements(p, meIndex, opt));
   const rank = (rows) => rows.sort((a, b) => score(b.m, objective) - score(a.m, objective));
-  const step = (label) => (done, total) => { ui.status = `${label}: ${done} / ${total} batches…`; rerender(); };
+  let shown = 0;
+  const step = (label) => (done, total) => {
+    if (done < total && performance.now() - shown < 150) return;
+    shown = performance.now();
+    ui.status = `${label}: ${Math.round(100 * done / total)}%�`;
+    rerender();
+  };
+  const pre = Math.max(10, opt.pre_screen_runs);
   ui.running = { cancel() {} };
   ui.result = null;
   try {
-    // Thresholds are spread up to what Me deposits in a whole raid without swapping.
-    const stay = await runStage(setup, candidatePlans(ROLES, 0).slice(0, ROLES.length), Math.max(200, opt.pre_screen_runs), opt.seed, step("Measuring deposits"));
-    const plans = candidatePlans(ROLES, Math.max(...stay.map((r) => r.m.meanMeTotal)));
-    const pre = rank(await runStage(setup, plans, Math.max(50, opt.pre_screen_runs), opt.seed + 1, step(`Screening ${plans.length} plans`)));
-    const screened = rank(await runStage(setup, pre.slice(0, 30).map((r) => r.plan), opt.screening_runs, opt.seed + 1_000_000, step("Narrowing down")));
-    const finalists = screened.slice(0, SHOWN);
+    // 1. Every team with Me in each role, no swap (what the Lab's optimizer does).
+    const stayPlans = allowed(teams.flatMap((t) => candidatePlans(t, meIndex, ROLES, [])));
+    const stay = await runStage(setup, stayPlans, pre, opt.seed, step(`Teams without a swap (${stayPlans.length})`));
+    // Swap amounts are scaled to what Me deposits over a whole raid.
+    const scale = Math.max(...stay.map((r) => r.m.meanMeTotal));
+    // 2. Every team with every swap at a few coarse amounts.
+    const coarse = allowed(teams.flatMap((t) => candidatePlans(t, meIndex, ROLES, spread(scale, 3)).slice(ROLES.length)));
+    const swaps = await runStage(setup, coarse, pre, opt.seed, step(`Teams with a swap (${coarse.length})`));
+    const top = rank([...stay, ...swaps]).slice(0, 40);
+    // 3. The best team / swap pairs get every amount, the rest stay as they were.
+    const seen = new Set(), refined = [];
+    for (const { plan } of top) {
+      const key = JSON.stringify([plan.roles, plan.from, plan.to]);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      if (plan.at === Infinity) refined.push(plan);
+      else for (const at of spread(scale, 15)) refined.push({ ...plan, at });
+    }
+    const screened = rank(await runStage(setup, refined, opt.screening_runs, opt.seed + 1_000_000, step(`Fine-tuning swap amounts (${refined.length})`)));
+    const finalists = screened.slice(0, Math.max(SHOWN, opt.finalist_count));
     // The best plan that never swaps is always shown, to compare against.
-    const bestStay = screened.find((r) => r.plan.at === Infinity) ?? pre.find((r) => r.plan.at === Infinity);
-    if (!finalists.includes(bestStay)) finalists.push(bestStay);
+    const bestStay = screened.find((r) => r.plan.at === Infinity) ?? rank(stay)[0];
+    if (bestStay && !finalists.includes(bestStay)) finalists.push(bestStay);
     const final = rank(await runStage(setup, finalists.map((r) => r.plan), opt.finalist_runs, opt.seed + 10_000_000, step("Final runs")));
     ui.result = { rows: final, objective, me: meIndex, cfg: lab.game };
-    ui.status = `Done. ${plans.length} plans tried; Me is slot ${meIndex + 1}, everyone else keeps their current role.`;
+    ui.status = `Done. ${teams.length} teams, ${stayPlans.length + coarse.length + refined.length} plans tried. Me is slot ${meIndex + 1}.`;
   } catch (err) {
     ui.status = err.message === "cancelled" ? "Role swap cancelled." : `Role swap failed: ${err.message}`;
     if (err.message !== "cancelled") console.error(err);
   }
   ui.running = null;
   rerender();
+}
+
+// Writes a plan's starting roles into the Lab's party and reloads it.
+function useRoles(plan, meIndex) {
+  let lab;
+  try { lab = JSON.parse(localStorage.getItem(LAB_STORAGE_KEY)); } catch { return; }
+  plan.roles.forEach((r, i) => { lab.party[i].manual_role = i === meIndex ? plan.from : r; });
+  localStorage.setItem(LAB_STORAGE_KEY, JSON.stringify(lab));
+  ui.status = `Party set to: ${teamText(plan, meIndex)}. Me starts as ${plan.from}.`;
+  labDoc.defaultView.location.reload();
+}
+
+function teamText(plan, meIndex) {
+  return plan.roles.map((r, i) => i === meIndex ? null : `${i + 1}: ${r}`).filter(Boolean).join(" | ");
 }
 
 function clock(sec) {
@@ -117,7 +154,7 @@ function card(doc, rerender) {
   el.id = "swap-card";
   el.style.gridColumn = "1 / -1";
   el.append(h("div", "card-title", "Role swap (Me)"));
-  el.append(h("p", "muted", "Me starts in one role and switches once, after their deposits reach a set amount. The other slots keep the roles chosen above. Uses the run counts and seed from the Optimizer."));
+  el.append(h("p", "muted", "Searches every role assignment for the party, with Me switching role once after their deposits reach a set amount. Uses the profiles above and the run counts, seed and Health / Force requirements from the Optimizer."));
   const row = h("div", "actions");
   const sel = h("select", "input");
   for (const [k, label] of Object.entries(OBJECTIVES)) {
@@ -142,15 +179,22 @@ function card(doc, rerender) {
     const wrap = h("div", "table-scroll");
     const table = h("table", "results-table");
     const head = h("tr");
-    for (const t of ["#", "Plan", "Swap reached", "Swapped in", "Mean cleared", "Me deposits", "Run sec"]) head.append(h("th", "", t));
+    for (const t of ["#", "Me", "Others", "Swap reached", "Swapped in", "Mean cleared", "Me deposits", "Run sec", ""]) head.append(h("th", "", t));
     table.append(head);
     r.rows.forEach(({ plan, m }, i) => {
       const tr = h("tr");
       const when = m.meanSwapTime == null ? "—" : `~${clock(m.meanSwapTime)} (${waveAt(m.meanSwapTime, r.cfg)})`;
-      const cells = [String(i + 1), planText(plan), when,
+      const cells = [String(i + 1), planText(plan), teamText(plan, r.me), when,
         plan.at === Infinity ? "—" : `${Math.round(m.swapRate * 100)}% of runs`,
         m.meanCleared.toFixed(3), Math.round(m.meanMeTotal).toLocaleString(), m.meanDuration.toFixed(1)];
-      cells.forEach((c, j) => tr.append(h("td", j === 1 ? "assignment" : "", c)));
+      cells.forEach((c, j) => tr.append(h("td", j === 1 || j === 2 ? "assignment" : "", c)));
+      const use = h("button", "secondary small", "Use");
+      use.title = "Set the party to these starting roles";
+      use.onclick = () => useRoles(plan, r.me);
+      use.disabled = !!ui.running;
+      const td = h("td");
+      td.append(use);
+      tr.append(td);
       table.append(tr);
     });
     wrap.append(table);

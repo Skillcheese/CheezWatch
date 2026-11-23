@@ -13,8 +13,8 @@ async function onMessage({ data }) {
   await ready;
   if (data.kind === "init") { setup = data; return; }
   try {
-    const { profiles, roles, meIndex, cfg } = setup;
-    const stats = runPlan(G, profiles, roles, meIndex, data.plan, cfg, data.start, data.count, data.seed);
+    const { profiles, meIndex, cfg } = setup;
+    const stats = runPlan(G, profiles, meIndex, data.plan, cfg, data.start, data.count, data.seed);
     self.postMessage({ kind: "done", id: data.id, stats });
   } catch (err) {
     self.postMessage({ kind: "error", message: err.stack || err.message });

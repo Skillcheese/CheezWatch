@@ -4,11 +4,11 @@
 // it in step with engine.ts when the submodule is bumped.
 const EPS = 1e-9;
 
-// plan: { from, to, at } — Me plays `from` until their deposits add up to
+// plan: { roles, from, to, at } — everyone plays plan.roles except Me, who plays `from` until their deposits add up to
 // `at` stat points, then every later trip is `to`. at = Infinity never swaps.
-export function simulateSwap(G, profiles, roles, meIndex, plan, cfg, seed) {
+export function simulateSwap(G, profiles, meIndex, plan, cfg, seed) {
   const rngs = profiles.map((_p, i) => G.FAST_RNG_FACTORY.worker(seed, i));
-  const current = [...roles];
+  const current = [...plan.roles];
   current[meIndex] = plan.from;
   let meTotal = 0, swapTime = null;
   const queue = [];
@@ -78,10 +78,10 @@ export function emptyStats() {
   return { runs: 0, cleared: 0, meTotal: 0, swaps: 0, swapTime: 0, duration: 0 };
 }
 
-export function runPlan(G, profiles, roles, meIndex, plan, cfg, start, count, baseSeed) {
+export function runPlan(G, profiles, meIndex, plan, cfg, start, count, baseSeed) {
   const s = emptyStats();
   for (let i = start; i < start + count; i++) {
-    const r = simulateSwap(G, profiles, roles, meIndex, plan, cfg, baseSeed + i * 1009);
+    const r = simulateSwap(G, profiles, meIndex, plan, cfg, baseSeed + i * 1009);
     s.runs++;
     s.cleared += r.cleared;
     s.meTotal += r.meTotal;
@@ -107,13 +107,26 @@ export function summarize(s) {
   };
 }
 
-// Every start role, every other role to move to, at fractions of the
-// biggest no-swap total, plus staying put in each role.
-export function candidatePlans(roles, maxTotal, steps = 15) {
-  const plans = roles.map((r) => ({ from: r, to: r, at: Infinity }));
-  for (const from of roles) for (const to of roles) {
+// Staying put in each role, plus every swap at each threshold, for one team
+// (roles of the other slots; Me's entry is ignored).
+export function candidatePlans(team, meIndex, roleList, thresholds) {
+  const plans = roleList.map((r) => ({ roles: team, from: r, to: r, at: Infinity }));
+  for (const from of roleList) for (const to of roleList) {
     if (from === to) continue;
-    for (let k = 1; k <= steps; k++) plans.push({ from, to, at: Math.round(maxTotal * k / (steps + 1)) });
+    for (const at of thresholds) plans.push({ roles: team, from, to, at });
   }
   return plans;
+}
+
+export function spread(max, steps) {
+  return Array.from({ length: steps }, (_v, k) => Math.round(max * (k + 1) / (steps + 1)));
+}
+
+// The Lab's Health / Force requirements, checked before and after the swap.
+export function meetsRequirements(plan, meIndex, opt) {
+  return [plan.from, plan.to].every((me) => {
+    const roles = plan.roles.map((r, i) => i === meIndex ? me : r);
+    return (!opt.require_health || roles.includes("Health"))
+      && (!opt.require_force || roles.some((r) => r === "Melee" || r === "Ranged" || r === "Magic"));
+  });
 }
