@@ -18,7 +18,7 @@ Nothing in this repo hooks into the game. No browser extension, no content scrip
 | `standalone/lib/` | Role tiers and the calibrated profile formulas (`lab-profile.js` also writes into the Lab's localStorage state). |
 | `standalone/vision/` | Screenshot readers (skills, unlocks, perks, fortify, fortress) and the classifier for folder import. |
 | `standalone/lab/` | Built Gauntlet Lab, copied in by `npm run build:lab`. Generated and gitignored. |
-| `gauntlet_lab/` | **Git submodule** (upstream: amulder87/gauntlet_lab, AGPL-3.0). TypeScript, built into `gauntlet_lab/dist/`. |
+| `gauntlet_lab/` | **Git submodule**: our fork Skillcheese/gauntlet_lab, branch `cheezwatch-material-save` (original: amulder87/gauntlet_lab, AGPL-3.0, remote `upstream`). TypeScript, built into `gauntlet_lab/dist/`. |
 | `scripts/` | `copy-lab.js`, `extract-icons.js` (from the game's `app.asar`), `copy-tesseract.js`, `serve.js` (localhost), `bundle-site.js` (→ `site/`). |
 | `worker/feedback/` | Cloudflare Worker behind `/api/feedback`: emails footer feedback to the owner. See `docs/feedback.md`. |
 | `standalone.cmd` | Double-click: builds what's missing, serves on localhost:8787 and opens it. |
@@ -43,4 +43,4 @@ npm test
 - The environment is Windows 11 with Chrome. Keep `.cmd` files CRLF.
 - Never commit game assets (`app.asar`, extracted icons, `Constants.js`, etc.).
 - Commit messages are short imperative subjects and end with the Co-Authored-By trailer.
-- Treat `gauntlet_lab/` as upstream code. Prefer integrating from the outside (see `docs/gauntlet-lab.md`) over editing it. If an edit is unavoidable, it has to be committed *inside* the submodule, and the parent repo then records the new submodule commit.
+- Treat `gauntlet_lab/` as upstream code. Prefer integrating from the outside (see `docs/gauntlet-lab.md`) over editing it. If an edit is unavoidable, it has to be committed *inside* the submodule and pushed to the fork, and the parent repo then records the new submodule commit.
