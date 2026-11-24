@@ -451,11 +451,11 @@ function details() {
   if (p && !p.error) {
     parts.push(h("details", { open: "", "data-key": "applied" }, h("summary", {}, "Written to Me"),
       h("table", {},
-        h("tr", {}, h("th", {}, "Role"), h("th", {}, "Tier"), h("th", {}, "Gather time"), h("th", {}, "Success"), h("th", {}, "Double"), h("th", {}, "Process time"), h("th", {}, "Success")),
+        h("tr", {}, h("th", {}, "Role"), h("th", {}, "Tier"), h("th", {}, "Gather time"), h("th", {}, "Success"), h("th", {}, "Double"), h("th", {}, "Process time"), h("th", {}, "Success"), h("th", {}, "Save")),
         Object.entries(p.roleStats).map(([role, r]) => h("tr", {},
           h("td", {}, role), h("td", {}, `T${p.roleTiers[role]}`),
           h("td", {}, r.gather_time.toFixed(3)), h("td", {}, pct(r.gather_success)), h("td", {}, pct(r.double_gather)),
-          h("td", {}, r.process_time.toFixed(3)), h("td", {}, pct(r.process_success)))),
+          h("td", {}, r.process_time.toFixed(3)), h("td", {}, pct(r.process_success)), h("td", {}, pct(r.material_save ?? 0)))),
       ),
       h("p", {}, `Movement speed ${p.movementSpeed} (${POTION_LABELS[state.potion]} potion).`
         + (state.fort.known ? ` Backpack ${p.backpackSize} slots.` : "")),

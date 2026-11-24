@@ -73,7 +73,9 @@ export function applyMovementSpeed(state, speed) {
 // 10 - 0.01·(level - 1) minus every reduction, floored at 2.0s, and the
 // Gauntlet divides it by GAUNTLET_HASTE (10). Success is 70% + 1% per level
 // over the node's requirement + 1% per source; each 1% over 100 cuts 0.05s.
-// Reduction past the 2.0s floor turns into +3% double per second (gather).
+// Reduction past the 2.0s floor turns into +3% double per second (gather)
+// or +1.5% material save per second (process). Save keeps the raw resource
+// when a Fortress process fails.
 const BASE_DURATION = 10;
 const LEVEL_CUT = 0.01;
 const MIN_DURATION = 2.0;
@@ -82,6 +84,8 @@ const SUCCESS_BASE = 70;
 const OVERFLOW_SEC_PER_PCT = 0.05;
 const OVERFLOW_DOUBLE_PER_SEC = 3;
 const MAX_DOUBLE = 0.85;
+const OVERFLOW_SAVE_PER_SEC = 1.5;
+const MAX_SAVE = 0.55;
 
 // Fortress node requirements per tier (nodes.json).
 const TIER_LEVELS = [1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 99];
@@ -104,10 +108,12 @@ function skillStats(unlocks, skill, level, nodeLevel, gather) {
   const reduction = -(own.duration ?? all.all_durations ?? 0) + overflowSec;
   const excess = Math.max(0, reduction - Math.max(0, base - MIN_DURATION));
   const double = gather ? (own.duplicate ?? 0) + excess * OVERFLOW_DOUBLE_PER_SEC : 0;
+  const save = gather ? 0 : (own.save ?? 0) + excess * OVERFLOW_SAVE_PER_SEC;
   return {
     time: round(Math.max(MIN_DURATION, base - reduction) / GAUNTLET_HASTE),
     success: round(Math.min(100, rawSuccess) / 100),
     double: round(Math.min(MAX_DOUBLE, double / 100)),
+    save: round(Math.min(MAX_SAVE, save / 100)),
   };
 }
 
@@ -132,7 +138,7 @@ export function roleStatsFromUnlocks(unlocks, levels) {
     const p = skillStats(unlocks, process, pl, fortressNodeLevel(tier), false);
     out[role] = {
       gather_time: g.time, gather_success: g.success, double_gather: g.double,
-      process_time: p.time, process_success: p.success,
+      process_time: p.time, process_success: p.success, material_save: p.save,
     };
   }
   return out;

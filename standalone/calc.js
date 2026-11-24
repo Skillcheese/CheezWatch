@@ -25,15 +25,19 @@ const SLOTS_PER_SATCHEL = 4;
 const DURATION_PER_CAPE_PET = 0.1;
 const MAX_CAPE_PET_SOURCES = 8;
 const VIGOR_SECONDS_PER_LEVEL = 0.005;
-const COLLECTOR = { seconds: 1.0, success: 10, double: 10, move: 0.10 };
+const COLLECTOR = { seconds: 1.0, success: 10, double: 10, save: 10, move: 0.10 };
+// Process skills get material save at half the double-gather rate per action
+// source; each Thrift Beacon is one more save source.
+const SAVE_PER_SOURCE = 0.5;
 // Fortify Tree talent totals, as read from the tree's stat summary (see
-// docs/fortify-tree.md): { moveSpeedPct, successPct, doubleGatherPct, actionTimeSec }.
+// docs/fortify-tree.md): { moveSpeedPct, successPct, saveMaterialPct, doubleGatherPct, actionTimeSec }.
 // Momentum joins the flat seconds stack; the others add like the Collector's.
 export function talentBonuses(t = {}) {
   return {
     seconds: Math.abs(t.actionTimeSec ?? 0),
     success: t.successPct ?? 0,
     double: t.doubleGatherPct ?? 0,
+    save: t.saveMaterialPct ?? 0,
     move: (t.moveSpeedPct ?? 0) / 100,
   };
 }
@@ -54,7 +58,7 @@ function toolSeconds(set) {
 
 /**
  * Global bonuses from owned Fortress items, `fort` being { family: Set(tiers) }:
- * { sources, seconds, success, double, move }. Ledgers and Banners are action
+ * { sources, seconds, success, double, save, move }. Ledgers and Banners are action
  * sources (success and double); Ledgers and Haste Beacons cut flat seconds.
  */
 export function fortBonuses(fort = {}) {
@@ -66,13 +70,14 @@ export function fortBonuses(fort = {}) {
     seconds: ledger.length * FORT.ledgerSeconds + sum(ranks("haste")) * FORT.hasteSeconds,
     success: ranks("sure").length,
     double: ranks("bounty").length,
+    save: ranks("thrift").length * SAVE_PER_SOURCE,
     move: (sum(ledger) + sum(banner)) * FORT.milestoneMove + sum(ranks("swift")) * FORT.swiftMove,
   };
 }
 
 /**
  * Per-skill bonus lines like the game's unlock_summaries, parsed:
- * { all_skills: { all_durations, success }, fish: { duration, success, duplicate }, ... }.
+ * { all_skills: { all_durations, success }, fish: { duration, success, duplicate, save }, ... }.
  * `owned` is { skill: Set(row ids) } with the all-skills column under "levels".
  */
 export function unlockSummaries({ owned, levels, collectorFraction = 0, fort, talents }) {
@@ -88,6 +93,7 @@ export function unlockSummaries({ owned, levels, collectorFraction = 0, fort, ta
       duration: -round2(seconds),
       success: round2(sources + f.success + t.success + COLLECTOR.success * collectorFraction),
       duplicate: round2(sources + f.double + t.double + COLLECTOR.double * collectorFraction),
+      save: round2(sources * SAVE_PER_SOURCE + f.save + t.save + COLLECTOR.save * collectorFraction),
     };
   };
   const base = summary(allCapePet, allTools, toolSeconds(all));

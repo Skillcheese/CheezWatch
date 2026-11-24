@@ -29,7 +29,7 @@ const unlocks = {
 test("scales duration cuts to Gauntlet time and uses the skill's success line alone", () => {
   assert.deepEqual(roleStatsFromUnlocks(unlocks).Health, {
     gather_time: 0.894, gather_success: 0.7681, double_gather: 0.0631,
-    process_time: 0.894, process_success: 0.7681,
+    process_time: 0.894, process_success: 0.7681, material_save: 0.0306,
   });
 });
 
@@ -53,7 +53,7 @@ test("success matches the in-game fish and cook readings", () => {
 test("falls back to global bonuses for skills without their own lines", () => {
   assert.deepEqual(roleStatsFromUnlocks(unlocks).Melee, {
     gather_time: 0.894, gather_success: 0.73, double_gather: 0,
-    process_time: 0.894, process_success: 0.73,
+    process_time: 0.894, process_success: 0.73, material_save: 0,
   });
 });
 
@@ -129,4 +129,11 @@ test("xp bonus scales the Lab's per-action Fortify XP", () => {
   assert.equal(state.game.action_xp_wave_slope, 0.45);
   applyXpBonus(state, 0);
   assert.equal(state.game.action_xp_base, 1);
+});
+
+test("process overflow past the floor spills into material save, capped at 55%", () => {
+  const { Health } = roleStatsFromUnlocks({ cook: { duration: -10, save: 2 } }, { fish: 99, cook: 99 });
+  assert.equal(Health.material_save, Math.round((2 + (10 - (10 - 0.98 - 2)) * 1.5) * 100) / 1e4);
+  const capped = roleStatsFromUnlocks({ cook: { save: 80 } }, { cook: 99 });
+  assert.equal(capped.Health.material_save, 0.55);
 });

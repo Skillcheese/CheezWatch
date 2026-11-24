@@ -63,7 +63,7 @@ test("fortress items: full sets match the game's stated totals", () => {
   assert.equal(b.success, 7);
   assert.equal(b.double, 7);
   close(b.move, 0.07 + 0.07 + 0.14);
-  assert.deepEqual(fortBonuses(), { sources: 0, seconds: 0, success: 0, double: 0, move: 0 });
+  assert.deepEqual(fortBonuses(), { sources: 0, seconds: 0, success: 0, double: 0, save: 0, move: 0 });
 });
 
 test("fortress items flow into summaries and movement", () => {
@@ -86,7 +86,7 @@ test("backpack size: 28 plus 4 per satchel tier", () => {
 
 test("fortify talents flow into summaries and movement", () => {
   const talents = { moveSpeedPct: 2.75, successPct: 5, doubleGatherPct: 10, actionTimeSec: -0.6 };
-  assert.deepEqual(talentBonuses(), { seconds: 0, success: 0, double: 0, move: 0 });
+  assert.deepEqual(talentBonuses(), { seconds: 0, success: 0, double: 0, save: 0, move: 0 });
   const u = unlockSummaries({ owned: {}, levels: { vigor: -1 }, talents });
   close(u.fish.duration, -0.6);
   close(u.fish.success, 5);
@@ -117,4 +117,10 @@ test("xp bonus adds every source the screenshots show", () => {
   close(x.parts.compasses, 0.5);
   close(x.total, 8.75 + 10.25 + 4.5 + 0.75 + 4.75 + 0.5);
   close(xpBonus().total, 0);
+});
+
+test("material save adds half a point per source plus Thrift, talents and the collector", () => {
+  const fort = { ledger: new Set(["T1", "T2"]), thrift: new Set(["T1", "T2", "T3"]) };
+  const u = unlockSummaries({ owned: {}, levels: { vigor: -1 }, fort, talents: { saveMaterialPct: 1.25 }, collectorFraction: 0.5 });
+  close(u.cook.save, 2 * 0.5 + 3 * 0.5 + 1.25 + 5);
 });

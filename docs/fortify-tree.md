@@ -45,7 +45,7 @@ The text is small (~8px tall at 1080p), bold, in the theme accent colour (blue o
 |---|---|---|---|---|
 | Fleet Foot | `moveSpeedPct` | % movement speed | 7 | **movement** |
 | Steady Hands | `successPct` | % success chance | 7 | **success** |
-| Thrift | `saveMaterialPct` | % save material | 6.75 | none (Lab has no save stat) |
+| Thrift | `saveMaterialPct` | % save material | 6.75 | **material save** |
 | Bounty | `doubleGatherPct` | % double gather | 18 | **double gather** |
 | Diligence | `skillingXpPct` | % skilling XP | 5 | none |
 | Fortifier's Insight | `fortifyXpPct` | % Fortify XP | 10 | none |
