@@ -127,7 +127,9 @@ async function kindOf(page, img) {
 async function readOne(file, kind, taken) {
   const [page, digit, line] = await ocrWorkers();
   const img = await decode(file);
-  kind ??= await kindOf(page, img);
+  // A crop of the diary cards has no title, so anything that isn't the
+  // Skills screen gets the (slower) whole-page diary check.
+  kind ??= (await kindOf(page, img)) ?? "diary";
   const name = file.name || "pasted image";
   if (kind === "diary") {
     const words = await pageWords(page, img);

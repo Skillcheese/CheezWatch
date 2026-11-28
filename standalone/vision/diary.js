@@ -9,9 +9,10 @@ const FRACTION = /^(\d{1,3})\/(\d{1,3})$/;
 
 export const tierOf = (done, total) => (total > 0 ? Math.min(5, Math.floor((5 * done) / total + 1e-9)) : 0);
 
-/** Is this OCR word list the Diary screen? */
+/** Is this OCR word list the Diary screen, or a crop of its cards? */
 export function isDiaryScreen(words) {
-  return words.some((w) => /^diary$/i.test(w.text)) && words.filter((w) => /^tier\s?\d$/i.test(w.text) || /^weight$/i.test(w.text)).length >= 2;
+  const n = (re) => words.filter((w) => re.test(w.text)).length;
+  return n(/^weight$/i) + n(/^nearby$/i) + n(/^tier\d?$/i) >= 4 && n(/^\d{1,3}\/\d{1,3}$/) >= 1;
 }
 
 /**
@@ -27,7 +28,8 @@ export function readDiary(words, banks) {
   const sameRow = (a, b) => Math.abs((a.y0 + a.y1) / 2 - (b.y0 + b.y1) / 2) < Math.max(a.y1 - a.y0, b.y1 - b.y0) * 0.7;
   const out = {};
   words.forEach((w, i) => {
-    const t = clean(w.text);
+    // OCR often reads a capital I as l ("lcecap").
+    const t = clean(w.text).replace(/^l(?=[^aeiou])|^l(?=ce)/, "i");
     if (t.length < 4) return;
     let cands = keys.filter((k) => k.first === t);
     if (cands.length > 1) {

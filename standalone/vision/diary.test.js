@@ -47,6 +47,19 @@ test("reads the Diary screenshot", { timeout: 120000 }, async () => {
       drypocket_bank: 3, duneridge_bank: 2, dustclaw_bank: 2, farmhold_bank: 2,
     });
     assert.deepEqual(got.dustclaw_bank, { done: 48, total: 89, tier: 2 });
+
+    // Crops of the cards, without the Diary title; Icecap OCRs as "lcecap".
+    const banks = [{ id: "icecap", name: "Icecap Bank" }, { id: "icemast", name: "Icemast Bank" }, { id: "highroot", name: "Highroot Bank" }, { id: "icelock", name: "Icelock Bank" }];
+    const crop = PNG.sync.read(fs.readFileSync(new URL("../../samples/diary-crop2.png", import.meta.url)));
+    const cb = binarize({ width: crop.width, height: crop.height, data: new Uint8ClampedArray(crop.data) }, 2, 0.3);
+    const cpng = new PNG({ width: cb.width, height: cb.height });
+    cpng.data = Buffer.from(cb.data.buffer);
+    const cw = (await worker.recognize(PNG.sync.write(cpng), {}, { blocks: true })).data.blocks
+      .flatMap((bl) => bl.paragraphs.flatMap((pa) => pa.lines.flatMap((l) => l.words)))
+      .map((x) => ({ text: x.text, x0: x.bbox.x0 / 2, y0: x.bbox.y0 / 2, x1: x.bbox.x1 / 2, y1: x.bbox.y1 / 2 }));
+    assert.ok(isDiaryScreen(cw));
+    const cr = readDiary(cw, banks);
+    assert.deepEqual(Object.fromEntries(Object.entries(cr).map(([k, v]) => [k, v.tier])), { highroot: 3, icecap: 2, icemast: 3, icelock: 4 });
   } finally {
     await worker.terminate();
   }
