@@ -6,8 +6,8 @@ Connection values (IP, SSH port, key path) are in `scripts/vps.env`, which is gi
 
 ## The box
 - OVH VPS, Ubuntu, 4 GB RAM, IPv4 only (it has IPv6, but there is no `AAAA` record and the edge firewall is IPv4 only).
-- SSH as `ubuntu` on a **non-standard port** (see `scripts/vps.env`). Use the key `~/.ssh/stellar_deploy` (ed25519, no passphrase, meant for scripts). `ubuntu` has full sudo.
-- Example: `ssh -i ~/.ssh/stellar_deploy -p $VPS_PORT $VPS_SSH`
+- SSH as `ubuntu` on a **non-standard port** (see `scripts/vps.env`). Use the key `~/.ssh/nullptrscape_deploy` (ed25519, no passphrase, meant for scripts). `ubuntu` has full sudo.
+- Example: `ssh -i ~/.ssh/nullptrscape_deploy -p $VPS_PORT $VPS_SSH`
 
 ## What already runs there (don't touch)
 | Piece | Where |
@@ -60,6 +60,6 @@ The server only serves static files; OCR, calcs and sims all run in the visitor'
 Hostname: `cheezwatch.nullptrscape.com` (same Cloudflare zone and account as the game, so it shares the `stellar-vps` tunnel).
 
 ## Gotchas
-- The SSH key prompt: if a key has a passphrase, pressing Enter silently falls back to password login. Scripts must use `stellar_deploy`.
+- The SSH key prompt: if a key has a passphrase, pressing Enter silently falls back to password login. Scripts must use `nullptrscape_deploy`.
 - The edge firewall is stateless: anything new that the box calls *out* to over UDP needs a source-port reply rule. TCP replies are already covered.
 - Don't edit the game's systemd units, `/etc/stellar`, or the existing ingress rule. If in doubt, ask.
