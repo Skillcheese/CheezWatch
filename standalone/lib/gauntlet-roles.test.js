@@ -8,8 +8,12 @@ test("tier is floor(min(gather, process) / 10)", () => {
   assert.equal(roleTier("Melee", 99, 99), 9);
 });
 
-test("Defense tier goes by brew alone", () => {
-  assert.equal(roleTier("Defense", 12, 75), 7);
+test("Defense tier goes by brew, capped by the farm band", () => {
+  assert.equal(roleTier("Defense", 12, 75), 3);
+  assert.equal(roleTier("Defense", 45, 75), 7);
+  assert.equal(roleTier("Defense", 75, 80), 7);
+  assert.equal(roleTier("Defense", 80, 85), 8);
+  assert.equal(roleTier("Defense", 85, 99), 9);
   assert.equal(roleTier("Defense", 99, 30), 3);
 });
 
