@@ -154,9 +154,10 @@ function cost(img, box, bg, ref, scale, dx, dy) {
   return count ? sum / count : 255;
 }
 
+// Frames come out a pixel or two off on large screenshots, so shifts reach 2.
 export function bestCost(img, box, bg, ref, scale) {
   let best = Infinity;
-  for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) best = Math.min(best, cost(img, box, bg, ref, scale, dx, dy));
+  for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) best = Math.min(best, cost(img, box, bg, ref, scale, dx, dy));
   return best;
 }
 
@@ -178,6 +179,7 @@ function fitScale(img, frames, bgs, refs) {
   for (const scale of SCALES) {
     let total = 0;
     for (const { i, ref } of pairs) total += bestCost(img, frames[i], bgs[i], ref, scale);
+    if (total < best.total) best = { scale, total };
   }
   return best.scale;
 }

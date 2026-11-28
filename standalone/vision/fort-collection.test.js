@@ -57,6 +57,18 @@ test("reads the Fortress collection after the Q1 update", { skip }, () => {
   });
 });
 
+test("reads a large Fortress collection screenshot", { skip }, () => {
+  const r = readFortCollection(sample("fort-52"), references());
+  assert.equal(r.items.length, 52); // 8 + 44
+  assert.ok(r.items.every((i) => i.id));
+  assert.deepEqual(plain(r.owned), {
+    banner: ["T1", "T2", "T3", "T4"], ledger: ["T1", "T2", "T3", "T4"],
+    haste: ["T1", "T2", "T3", "T4"], bounty: ["T1", "T2", "T3", "T4"], thrift: ["T1", "T2", "T3", "T4"],
+    sure: ["T1", "T2", "T3", "T4"], swift: ["T1", "T2", "T3", "T4"], satchel: ["T1", "T2", "T3", "T4", "T5"],
+    fortification: ["T1", "T2", "T3"],
+  });
+});
+
 test("rejects screenshots of other screens", { skip }, () => {
   for (const name of ["unlocks-blue", "unlocks-brown", "skills-brown"]) {
     assert.throws(() => readFortCollection(sample(name), references()), /The Fortress/, name);
