@@ -42,6 +42,12 @@ const stampDir = (dir) => {
       fs.writeFileSync(file, fs.readFileSync(file, "utf8").replace(/((?:src|href)=)"(?!https?:|\/|#)([\w./-]+\.(?:js|css))"/g, `$1"$2?v=${stamp}"`));
     } else if (/\.js$/.test(e.name) && dir !== path.join(out, "lab")) {
       fs.writeFileSync(file, tag(fs.readFileSync(file, "utf8")));
+    } else if (file === path.join(out, "lab", "app.js")) {
+      // The Lab's own code is left alone except its worker, which a stale
+      // cached copy would otherwise run against a newer page.
+      const src = fs.readFileSync(file, "utf8");
+      if (!src.includes('new Worker("worker.js")')) throw new Error("Lab worker URL not found in lab/app.js");
+      fs.writeFileSync(file, src.replace('new Worker("worker.js")', `new Worker("worker.js?v=${stamp}")`));
     }
   }
 };

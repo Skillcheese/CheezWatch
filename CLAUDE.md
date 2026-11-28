@@ -24,7 +24,7 @@ Nothing in this repo hooks into the game. No browser extension, no content scrip
 | `scripts/` | `copy-lab.js`, `extract-icons.js` (from the game's `app.asar`), `copy-tesseract.js`, `serve.js` (localhost), `bundle-site.js` (→ `site/`). |
 | `worker/feedback/` | Cloudflare Worker behind `/api/feedback`: emails footer feedback to the owner. See `docs/feedback.md`. |
 | `standalone.cmd` | Double-click: builds what's missing, serves on localhost:8787 and opens it. |
-| `docs/` | Gauntlet Lab notes, game data notes, handoff notes. `docs/vps.md`: hosting the site on the shared VPS. |
+| `docs/` | Gauntlet Lab notes, game data notes, handoff notes. `docs/vps.md`: hosting the site on the shared VPS. `docs/fortress-sim-calibration.md`: how the Fortress engine was checked against real runs, and what's still open. |
 
 ## Commands
 
