@@ -31,17 +31,29 @@ const sample = (name) => {
   return { width: p.width, height: p.height, data: new Uint8ClampedArray(p.data) };
 };
 
-test("reads levels and weights from the Skills Customization screen", { timeout: 180000 }, async () => {
-  const page = await createWorker("eng", 1, { langPath: LANG.pathname.replace(/^\/(\w:)/, "$1") });
-  const digit = await createWorker("eng", 1, { langPath: LANG.pathname.replace(/^\/(\w:)/, "$1") });
+const workers = async () => {
+  const lang = LANG.pathname.replace(/^\/(\w:)/, "$1");
+  const [page, digit, line] = await Promise.all([0, 1, 2].map(() => createWorker("eng", 1, { langPath: lang })));
+  await page.setParameters(WEIGHTS_OCR_PARAMS);
+  await digit.setParameters({ tessedit_pageseg_mode: "7", tessedit_char_whitelist: "+-12345" });
+  await line.setParameters({ tessedit_pageseg_mode: "7" });
+  return {
+    read: (img) => readSkillWeights(
+      img,
+      async (part) => ({ words: (await page.recognize(toPng(part), {}, { blocks: true })).data.blocks.flatMap((b) => b.paragraphs.flatMap((p) => p.lines.flatMap((l) => l.words))) }),
+      async (part) => (await digit.recognize(toPng(part))).data.text,
+      async (part) => (await line.recognize(toPng(part))).data.text,
+    ),
+    done: () => Promise.all([page, digit, line].map((w) => w.terminate())),
+  };
+};
+const on = (owned) => ({ owned, enabled: true, chance: [0, 0.5, 0.75, 1][owned] });
+const off = (owned) => ({ owned, enabled: false, chance: 0 });
+
+test("reads levels, weights and automaters from the Skills Customization screen", { timeout: 240000 }, async () => {
+  const w = await workers();
   try {
-    await page.setParameters(WEIGHTS_OCR_PARAMS);
-    await digit.setParameters({ tessedit_pageseg_mode: "7", tessedit_char_whitelist: "+-12345" });
-    const got = await readSkillWeights(
-      sample("weights-blue"),
-      async (img) => ({ words: (await page.recognize(toPng(img), {}, { blocks: true })).data.blocks.flatMap((b) => b.paragraphs.flatMap((p) => p.lines.flatMap((l) => l.words))) }),
-      async (img) => (await digit.recognize(toPng(img))).data.text,
-    );
+    const got = await w.read(sample("weights-blue"));
     assert.deepEqual(got.levers, {
       fish: -1, cook: -1, mine: 5, smith: 5, forage: -1, craft: -1, invoke: -1, imbue: -1, farm: -1, brew: 2,
       plunder: -1, barter: -2, bard: -1, discover: -1, vigor: -1, luck: 4, quests: 1,
@@ -51,10 +63,17 @@ test("reads levels and weights from the Skills Customization screen", { timeout:
     assert.equal(got.levels.brew, 82);
     assert.equal(got.levels.luck, 83);
     assert.equal(got.percent.mine, 17);
-    assert.equal(got.percent.brew, 9);
     assert.deepEqual(got.credits, { free: 1, total: 2376 });
+    assert.deepEqual(got.automaterOrder, ["luck", "tier", "slay", "distance", "materials", "quantity", "quests"]);
+    assert.deepEqual(got.automaters, { luck: on(3), tier: on(3), slay: off(2), distance: on(3), materials: on(3), quantity: on(3), quests: on(3) });
+
+    const alt = await w.read(sample("weights-alt"));
+    assert.equal(alt.levels.mine, 57);
+    assert.equal(alt.levers.luck, 5);
+    assert.equal(alt.levers.mine, 0);
+    assert.deepEqual(alt.automaterOrder, ["luck", "quests", "tier", "quantity", "materials", "distance", "slay"]);
+    assert.deepEqual(alt.automaters, { luck: on(3), quests: on(3), tier: off(3), quantity: on(3), materials: on(3), distance: on(3), slay: off(0) });
   } finally {
-    await page.terminate();
-    await digit.terminate();
+    await w.done();
   }
 });

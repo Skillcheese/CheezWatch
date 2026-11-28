@@ -109,7 +109,13 @@ function rollOption(ctx, weights, levers, rand) {
   const acts = ctx.available[skill];
   if (!acts.length) return null;
   const act = acts[Math.floor(rand() * acts.length)];
-  const node = act.nodes[Math.floor(rand() * act.nodes.length)];
+  // Location: weighted by its node weight (10 × 1.25^w, like skills).
+  let node = act.nodes[0];
+  const nw = weights.nodeCum?.get(act.id);
+  if (nw) {
+    let r2 = rand() * nw[nw.length - 1];
+    for (let i = 0; i < nw.length; i++) if (r2 <= nw[i]) { node = act.nodes[i]; break; }
+  } else node = act.nodes[Math.floor(rand() * act.nodes.length)];
   const base = Math.max(10, ctx.data.activities[skill].baseQuantity + (levers[skill] ?? 0) * 10) + ctx.milestones * QUANTITY_PER_MILESTONE;
   const lo = Math.round(base * 0.5), hi = Math.round(base * 1.5);
   const qty = lo + Math.floor(rand() * (hi - lo + 1));
@@ -170,12 +176,20 @@ const goalValue = (xp, goals) => {
   return v;
 };
 
-function weightsFor(ctx, levers) {
+function weightsFor(ctx, levers, nodeLevers) {
   const skills = ctx.data.skills.filter((s) => ctx.available[s].length);
   const w = skills.map((s) => leverWeight(levers[s] ?? 0));
   const luckBase = ctx.profile.luckChance ?? 0.02;
   const luck = Math.max(0, Math.min(0.05, luckBase + ((levers.luck ?? 0) - (ctx.profile.luckLever ?? 0)) * LUCK_PER_LEVER));
-  return { skills, w, total: w.reduce((a, b) => a + b, 0), luck };
+  let nodeCum = null;
+  if (nodeLevers) {
+    nodeCum = new Map();
+    for (const s of skills) for (const act of ctx.available[s]) {
+      let t = 0;
+      nodeCum.set(act.id, act.nodes.map((n) => (t += leverWeight(nodeLevers[n] ?? 0))));
+    }
+  }
+  return { skills, w, total: w.reduce((a, b) => a + b, 0), luck, nodeCum };
 }
 
 /**
@@ -188,7 +202,7 @@ function weightsFor(ctx, levers) {
  */
 export function simulate(ctx, levers, goals, policy, seed, keepTasks = false) {
   const rand = rng(seed);
-  const weights = weightsFor(ctx, levers);
+  const weights = weightsFor(ctx, levers, policy.nodeLevers);
   const limit = (policy.hours ?? 100) * 3600;
   const bank = new Map(Object.entries(policy.bank ?? {}));
   const tracked = policy.tracked !== false;
@@ -376,4 +390,103 @@ export function heuristics(ctx, records, goals) {
     perHour: (g.value / g.seconds) * 3600, vsAverage: g.value / g.seconds / (avg || 1), travelShare: g.travel / g.seconds,
   }));
   return { averagePerHour: avg * 3600, rows };
+}
+
+/**
+ * The free location weights. `tiers` is { bank index: diary tier 0-5 }; each
+ * location's weight can be anywhere in ±(its bank's tier). `mode` "node"
+ * sets each location on its own, "bank" one weight for all of a bank's
+ * locations. Returns { nodeLevers (per node index), groups: [{ key, nodes,
+ * range, lever, score }], value, base }.
+ */
+export function optimizeNodeLevers(ctx, levers, goals, policy, { tiers, mode = "node", runs = 8, seed = 1, passes = 0, onProgress } = {}) {
+  const N = ctx.N;
+  const range = (n) => tiers[ctx.data.nodes[n].bank] ?? 0;
+  // How often each activity is rolled, to weigh what a location saves.
+  const wts = weightsFor(ctx, levers);
+  const actShare = new Map();
+  wts.skills.forEach((s, i) => {
+    const acts = ctx.available[s];
+    for (const a of acts) actShare.set(a, (wts.w[i] / wts.total) / acts.length);
+  });
+  // Heuristic per location: time it saves (or costs) against the average
+  // location for each activity it hosts, scaled by how often that activity
+  // rolls and whether the player would take it. Goal activities count fully;
+  // others count too for an AFK player, who has to do them anyway.
+  const takeOffGoal = policy.mode === "active" ? 0.15 : 1;
+  const score = new Float64Array(N);
+  for (const [act, share] of actShare) {
+    if (act.nodes.length < 2) continue;
+    const goal = (goals[act.skill] ?? 0) > 0 || act.auto.some((x) => (goals[x.recipe.skill] ?? 0) > 0);
+    const times = act.nodes.map((n) => evaluate(ctx, { act, node: n, qty: 100, lucky: false }, -1, new Map(), false).seconds);
+    const mean = times.reduce((a, b) => a + b, 0) / times.length;
+    act.nodes.forEach((n, i) => { score[n] += share * (goal ? 1 : takeOffGoal) * (mean - times[i]) / mean; });
+  }
+  const groupsByKey = new Map();
+  for (let n = 0; n < N; n++) {
+    if (!range(n) || !score[n]) continue;
+    const key = mode === "bank" ? `b${ctx.data.nodes[n].bank}` : `n${n}`;
+    const g = groupsByKey.get(key) ?? { key, nodes: [], range: range(n), score: 0 };
+    g.nodes.push(n);
+    g.score += score[n];
+    groupsByKey.set(key, g);
+  }
+  const groups = [...groupsByKey.values()].filter((g) => g.nodes.some((n) => score[n] !== 0));
+  const nodeLevers = new Float64Array(N);
+  const set = (g, v) => { g.lever = v; for (const n of g.nodes) nodeLevers[n] = v; };
+  for (const g of groups) set(g, g.score > 0 ? g.range : -g.range);
+  const evalNow = () => averageRuns(ctx, levers, goals, { ...policy, nodeLevers }, seed, runs).valuePerHour;
+  // The simulation refinement is off by default: a location's effect is
+  // smaller than the noise of a few hundred simulated hours.
+  if (!passes) return { nodeLevers: Array.from(nodeLevers), direction: Array.from(nodeLevers, (v, n) => Math.sign(v) || Math.sign(score[n])), groups };
+  const base = averageRuns(ctx, levers, goals, policy, seed, runs).valuePerHour;
+  let best = evalNow();
+  // Refine with the simulation, the least clear-cut locations first: it
+  // sees routes between tasks, which the heuristic doesn't.
+  const order = [...groups].sort((a, b) => Math.abs(a.score) - Math.abs(b.score)).slice(0, mode === "bank" ? groups.length : 80);
+  let step = 0;
+  for (let pass = 0; pass < passes; pass++) {
+    let changed = false;
+    for (const g of order) {
+      const keep = g.lever;
+      for (const v of [g.range, 0, -g.range]) {
+        if (v === keep) continue;
+        set(g, v);
+        const val = evalNow();
+        if (val > best * 1.001) { best = val; changed = true; break; }
+        set(g, keep);
+      }
+      onProgress?.(++step, order.length * passes);
+    }
+    if (!changed) break;
+  }
+  // Which way each location should go once it has range, for diaryGains.
+  const direction = Array.from(nodeLevers, (v, n) => Math.sign(v) || Math.sign(score[n]));
+  return { nodeLevers: Array.from(nodeLevers), direction, groups, value: best, base };
+}
+
+/**
+ * For each bank whose diary isn't finished: goal XP/hr gained by one more
+ * tier, keeping the recommended direction for its locations.
+ */
+export function diaryGains(ctx, levers, goals, policy, { tiers, nodeLevers, direction, runs = 6, seed = 1 }) {
+  const base = averageRuns(ctx, levers, goals, { ...policy, nodeLevers }, seed, runs).valuePerHour;
+  const out = [];
+  ctx.data.banks.forEach((b, bi) => {
+    const t = tiers[bi] ?? 0;
+    if (t >= 5) return;
+    const nodes = [];
+    ctx.data.nodes.forEach((n, i) => { if (n.bank === bi) nodes.push(i); });
+    if (!nodes.length) return;
+    const lv = nodeLevers.slice();
+    let any = false;
+    for (const n of nodes) {
+      const dir = direction[n];
+      if (dir) { lv[n] = dir * (t + 1); any = true; }
+    }
+    if (!any) return;
+    const v = averageRuns(ctx, levers, goals, { ...policy, nodeLevers: lv }, seed, runs).valuePerHour;
+    out.push({ bank: bi, name: b.name, tier: t, gain: v - base, share: v / base - 1 });
+  });
+  return out.sort((a, b) => b.gain - a.gain);
 }

@@ -41,6 +41,12 @@
     ul.tips { margin: 6px 0; padding-left: 20px; }
     ul.tips li { margin: 3px 0; }
     details summary { cursor: pointer; color: var(--dim); }
+    details { margin: 4px 0; }
+    details table { margin: 4px 0 8px; }
+    .tiers { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 2px 12px; font-size: 13px; }
+    .goal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 4px 12px; margin-top: 6px; }
+    .goal-grid input { width: 56px; }
+    label.radio { cursor: pointer; }
   </style>
   <script src="vendor/tesseract.min.js"></script>
 </head>
@@ -50,7 +56,7 @@
       <h1>Map Optimizer</h1>
       <a href="./">← Back to CheezWatch</a>
     </header>
-    <p class="dim">Simulates thousands of hours of the skilling task queue to find the skill weights (and which tasks to take or reroll) that give the most XP per hour in the skills you care about. Nothing here talks to the game: it only reads the screenshot you drop in.</p>
+    <p class="dim">Works out the free location weights your diaries allow, for the most XP per hour in the skills you care about, by simulating thousands of hours of your task queue. Nothing here talks to the game: it only reads screenshots you give it.</p>
     <div id="app"></div>
   </main>
   <script type="module" src="map.js"></script>

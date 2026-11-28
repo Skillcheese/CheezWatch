@@ -1,26 +1,31 @@
 # Map Optimizer
 
-`standalone/map.html`: finds skill weights (levers) and task-taking rules for
-chosen goal skills by Monte Carlo simulation of the skilling task queue.
+`standalone/map.html`: recommends the free location (node) weights your
+diaries allow, per location or per whole bank area, for the most goal XP/hr.
 
 - Data: `scripts/extract-map-data.js` copies nodes, activities and bank-to-bank
-  path lengths from `app.asar` into `standalone/data/map.json` (gitignored game data;
+  path lengths from `app.asar` into `standalone/data/map.json` (gitignored game data,
   shipped only in the deployed bundle).
-- Input: the Skills Customization screenshot (`vision/skill-weights.js` reads
-  levels, weights from the red/green pips, and the credit total). Speed, backpack
-  and per-skill action bonuses come from the main page's import
-  (`cheezwatch-skilling-profile` in localStorage).
-- Model: `lib/map-sim.js`; runs in `map-worker.js`. Active = pick best XP/hr
-  per row incl. walking, reroll weak rows while credits last (tuned threshold).
-  AFK = automaters or the first option. Lever search is local search (±1 and
-  swaps) within the credit budget.
+- Screenshots (dropped, pasted, or scanned from a folder, newest first):
+  - Skills Customization (`vision/skill-weights.js`, `vision/automaters.js`): levels,
+    skill weights, credit total, and the Task Automaters row (order = priority,
+    accent frame = on, faded icon = not owned).
+  - Diary (`vision/diary.js`): each bank's `done/total`; tier = floor(5 × done / total).
+  - Movement speed, backpack and action bonuses come from the main page's import
+    (`cheezwatch-skilling-profile` in localStorage).
+- Model (`lib/map-sim.js`, run in `map-worker.js`): a task rolls skill → activity →
+  location (10 × 1.25^weight) → quantity. A location's weight goes to ±its bank's
+  tier by how much time it saves against the other places offering the same
+  activities (bank trips), weighted by how often each activity rolls. A simulated
+  refinement exists (`passes`) but is off: one location's effect is below the noise
+  of a few hundred simulated hours. Results compare 24 paired runs.
 
 ## Assumptions (not in the client's code)
 
-- An option rolls its skill by weight, then any activity you have the level for
-  (uniform), then any node hosting it (uniform).
+- Activities are equally likely within a skill (activity weights aren't read yet).
 - Quantity bonus of +6 per 100 total levels is added to the lever-adjusted base.
 - Gathering banks each full backpack at the node's nearest bank; walking between
   nodes goes via banks (or straight × 1.3 when shorter).
 - A processing task without enough materials processes what the bank holds.
-- Lucky tasks: two successes per action. Quests and combat aren't simulated.
+- Luck chance uses the game's formula without unlocks (the screenshot's % is too dim to read).
+- Quests and combat aren't simulated.

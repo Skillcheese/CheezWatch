@@ -5,6 +5,7 @@
 // pip belongs to the nearest skill name on its left in the same row.
 import { binarize } from "./collections.js";
 import { crop } from "./image.js";
+import { readAutomaters } from "./automaters.js";
 
 export const WEIGHTS_OCR_PARAMS = { tessedit_pageseg_mode: "11" };
 export const WEIGHT_SKILLS = [
@@ -119,7 +120,7 @@ export function parsePip(text, colour) {
  * OCRs a whole binarized image; `readDigit(image) → Promise<text>` one pip.
  * Returns { levels, levers, percent, found, warnings }.
  */
-export async function readSkillWeights(img, recognize, readDigit) {
+export async function readSkillWeights(img, recognize, readDigit, readLine) {
   const { words } = await recognize(binarize(img, SCALE, 0.3));
   const scaled = words.map((wd) => ({ text: wd.text, x0: wd.bbox.x0 / SCALE, y0: wd.bbox.y0 / SCALE, x1: wd.bbox.x1 / SCALE, y1: wd.bbox.y1 / SCALE }));
   const names = [];
@@ -163,5 +164,13 @@ export async function readSkillWeights(img, recognize, readDigit) {
   for (const s of found) levers[s] ??= 0;
   const missing = WEIGHT_SKILLS.filter((s) => !found.includes(s));
   if (missing.length) warnings.push(`Not found: ${missing.join(", ")}.`);
-  return { levels, levers, percent, found, warnings, credits: credits ? { free: Number(credits[1]), total: Number(credits[2]) } : null };
+  let automaters = null, automaterOrder = null;
+  const title = scaled.find((wd) => /automat/i.test(wd.text));
+  if (title && readLine) {
+    const got = await readAutomaters(img, title, (part) => readLine(binarize(part, 4, 0.35)));
+    automaters = got.automaters;
+    automaterOrder = got.order;
+    warnings.push(...got.warnings);
+  } else if (readLine) warnings.push("No Task Automaters row found.");
+  return { levels, levers, percent, found, warnings, automaters, automaterOrder, credits: credits ? { free: Number(credits[1]), total: Number(credits[2]) } : null };
 }
