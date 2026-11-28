@@ -11,6 +11,14 @@ if not exist standalone\icons\fort\satchel_t1.png (
   )
   node scripts/extract-icons.js || goto :error
 )
+rem The map optimizer reads the game's nodes and activities.
+if not exist standalone\data\map.json (
+  if not exist app.asar (
+    echo Copy the game's app.asar into %~dp0 first, then run this again.
+    goto :error
+  )
+  node scripts/extract-map-data.js || goto :error
+)
 call npm run build:standalone || goto :error
 start "" http://localhost:8787/standalone/
 node scripts/serve.js 8787

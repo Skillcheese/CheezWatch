@@ -33,6 +33,7 @@ const EXAMPLES = [
 const FORT_KEY = "standalone-import-fort";
 const TALENTS_KEY = "standalone-import-talents";
 const PERKS_KEY = "standalone-import-perks";
+const SKILLING_PROFILE_KEY = "cheezwatch-skilling-profile";
 const XP_LABELS = {
   talents: "Fortify Tree", fort: "Fortress items", lanterns: "lanterns", capesPets: "capes & pets", telescopes: "telescopes", compasses: "compasses",
 };
@@ -346,6 +347,16 @@ function apply() {
     perks: state.perksSaved,
     globes: state.globes,
   });
+  // The map optimizer (map.html) runs on the same readings.
+  try {
+    localStorage.setItem(SKILLING_PROFILE_KEY, JSON.stringify({
+      levels: s.levels,
+      unlocks: profile.unlocks,
+      movementSpeed: profile.movementSpeed,
+      backpackSize: state.fort.known ? profile.backpackSize : null,
+      globe: GLOBES[state.globes] ?? 0,
+    }));
+  } catch {}
   let lab;
   try { lab = JSON.parse(localStorage.getItem(LAB_STORAGE_KEY)); } catch { lab = null; }
   if (!lab?.profiles?.Me) {

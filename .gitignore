@@ -13,3 +13,5 @@ samples/Blue/
 scripts/vps.env
 worker/feedback/.wrangler/
 /Constants.js
+standalone/data/
+/nodes.json

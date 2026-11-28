@@ -17,7 +17,7 @@ const copyDir = (from, to) => {
   }
 };
 
-for (const need of ["standalone/lab/index.html", "standalone/vendor/tesseract.min.js", "standalone/icons/fort"]) {
+for (const need of ["standalone/lab/index.html", "standalone/vendor/tesseract.min.js", "standalone/icons/fort", "standalone/data/map.json"]) {
   if (!fs.existsSync(need)) {
     console.error(`Missing ${need}. Run standalone.cmd (or build:lab, extract-icons, build:standalone) first.`);
     process.exit(1);

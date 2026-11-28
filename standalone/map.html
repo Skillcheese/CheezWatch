@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CheezWatch Map Optimizer</title>
+  <script>try { if (localStorage.getItem("cheezwatch-theme") === "light") document.documentElement.classList.add("light"); } catch {}</script>
+  <style>
+    :root { --bg: #1b1f24; --panel: #232830; --line: #343a42; --text: #e4e7eb; --dim: #a3abb5; --accent: #7aa7f0; --good: #6fcf7f; --bad: #ef7b7b; color-scheme: dark; }
+    html.light { --bg: #f5f7fa; --panel: #fff; --line: #dde2e8; --text: #111; --dim: #555; --accent: #2a5db0; --good: #1d7f33; --bad: #b42323; color-scheme: light; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, sans-serif; }
+    main { max-width: 1180px; margin: 0 auto; padding: 16px; }
+    header { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+    h1 { font-size: 22px; margin: 0; }
+    h2 { font-size: 16px; margin: 0 0 8px; }
+    h3 { font-size: 14px; margin: 14px 0 6px; }
+    a { color: var(--accent); }
+    .dim { color: var(--dim); }
+    section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px; margin-top: 14px; }
+    .drop { border: 2px dashed var(--line); border-radius: 8px; padding: 18px; text-align: center; cursor: pointer; }
+    .drop.over { border-color: var(--accent); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 14px; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { text-align: left; padding: 3px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+    th { color: var(--dim); font-weight: 600; font-size: 12px; }
+    td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+    input[type=number] { width: 64px; font: inherit; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 1px 4px; }
+    select { font: inherit; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 4px; }
+    label.row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 3px 0; }
+    button { font: inherit; padding: 6px 14px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--text); cursor: pointer; }
+    button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    button:disabled { opacity: 0.5; cursor: default; }
+    .buttons { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .up { color: var(--good); } .down { color: var(--bad); }
+    .tag { display: inline-block; padding: 0 6px; border-radius: 4px; font-size: 12px; }
+    .tag.take { background: color-mix(in srgb, var(--good) 22%, transparent); color: var(--good); }
+    .tag.skip { background: color-mix(in srgb, var(--bad) 22%, transparent); color: var(--bad); }
+    .scroll { overflow-x: auto; }
+    .warn { color: var(--bad); }
+    ul.tips { margin: 6px 0; padding-left: 20px; }
+    ul.tips li { margin: 3px 0; }
+    details summary { cursor: pointer; color: var(--dim); }
+  </style>
+  <script src="vendor/tesseract.min.js"></script>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Map Optimizer</h1>
+      <a href="./">← Back to CheezWatch</a>
+    </header>
+    <p class="dim">Simulates thousands of hours of the skilling task queue to find the skill weights (and which tasks to take or reroll) that give the most XP per hour in the skills you care about. Nothing here talks to the game: it only reads the screenshot you drop in.</p>
+    <div id="app"></div>
+  </main>
+  <script type="module" src="map.js"></script>
+</body>
+</html>
