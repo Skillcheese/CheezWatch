@@ -347,7 +347,7 @@ function apply() {
     perks: state.perksSaved,
     globes: state.globes,
   });
-  // The map optimizer (map.html) runs on the same readings.
+  // The Map Optimizer tab runs on the same readings.
   try {
     localStorage.setItem(SKILLING_PROFILE_KEY, JSON.stringify({
       levels: s.levels,
@@ -639,6 +639,7 @@ function render() {
 }
 
 function onPaste(e) {
+  if (document.body.dataset.tab === "map") return;
   const file = [...(e.clipboardData?.files ?? [])].find((f) => f.type.startsWith("image/"));
   if (!file) return;
   e.preventDefault();

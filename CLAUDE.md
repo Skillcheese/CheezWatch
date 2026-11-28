@@ -17,7 +17,7 @@ Nothing in this repo hooks into the game. No browser extension, no content scrip
 | `standalone/` | The website: plain HTML/CSS/JS ES modules, no build step. `app.js` is the page, `calc.js` turns readings into a profile. |
 | `standalone/lib/` | Role tiers and the calibrated profile formulas (`lab-profile.js` also writes into the Lab's localStorage state). |
 | `standalone/vision/` | Screenshot readers (skills, unlocks, perks, fortify, fortress) and the classifier for folder import. |
-| `standalone/map.html` | Map Optimizer page (`map.js`, `map-worker.js`, `lib/map-sim.js`). See `docs/map-optimizer.md`. |
+| `standalone/map.js` | Map Optimizer tab on the main page (`map.js`, `map-worker.js`, `lib/map-sim.js`). See `docs/map-optimizer.md`. |
 | `standalone/data/` | `map.json` from `scripts/extract-map-data.js` (game data, gitignored). |
 | `standalone/lab/` | Built Gauntlet Lab, copied in by `npm run build:lab`. Generated and gitignored. |
 | `gauntlet_lab/` | **Git submodule**: our fork Skillcheese/gauntlet_lab, branch `cheezwatch-material-save` (original: amulder87/gauntlet_lab, AGPL-3.0, remote `upstream`). TypeScript, built into `gauntlet_lab/dist/`. |

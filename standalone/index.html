@@ -23,15 +23,70 @@
     #feedback .hp { position: absolute; left: -9999px; }
     #feedback-status { min-height: 1.2em; margin: 4px 0; }
     #feedback .buttons { text-align: right; }
+    :root { --bg: #1b1f24; --panel: #232830; --line: #343a42; --text: #e4e7eb; --dim: #a3abb5; --accent: #7aa7f0; --good: #6fcf7f; --bad: #ef7b7b; }
+    html.light { --bg: #f5f7fa; --panel: #fff; --line: #dde2e8; --text: #111; --dim: #555; --accent: #2a5db0; --good: #1d7f33; --bad: #b42323; }
+    nav.tabs { display: flex; gap: 2px; padding: 4px 8px 0; border-bottom: 1px solid var(--line); font: 13px system-ui, sans-serif; }
+    nav.tabs button { font: inherit; padding: 5px 14px; border: 1px solid transparent; border-bottom: 0; border-radius: 6px 6px 0 0; background: none; color: var(--dim); cursor: pointer; margin-bottom: -1px; }
+    nav.tabs button[aria-selected=true] { background: var(--bg); color: var(--text); border-color: var(--line); }
+    [hidden] { display: none !important; }
+    #map-tab * { box-sizing: border-box; }
+    #map-tab { flex: 1; overflow: auto; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, sans-serif; }
+    #map-tab main { max-width: 1180px; margin: 0 auto; padding: 16px; }
+    #map-tab header { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+    #map-tab h1 { font-size: 22px; margin: 0; }
+    #map-tab h2 { font-size: 16px; margin: 0 0 8px; }
+    #map-tab h3 { font-size: 14px; margin: 14px 0 6px; }
+    #map-tab a { color: var(--accent); }
+    #map-tab .dim { color: var(--dim); }
+    #map-tab section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px; margin-top: 14px; }
+    #map-tab .drop { border: 2px dashed var(--line); border-radius: 8px; padding: 18px; text-align: center; cursor: pointer; }
+    #map-tab .drop.over { border-color: var(--accent); }
+    #map-tab .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 14px; }
+    #map-tab table { border-collapse: collapse; width: 100%; }
+    #map-tab th, #map-tab td { text-align: left; padding: 3px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+    #map-tab th { color: var(--dim); font-weight: 600; font-size: 12px; }
+    #map-tab td.num, #map-tab th.num { text-align: right; font-variant-numeric: tabular-nums; }
+    #map-tab input[type=number] { width: 64px; font: inherit; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 1px 4px; }
+    #map-tab select { font: inherit; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 4px; }
+    #map-tab label.row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 3px 0; }
+    #map-tab button { font: inherit; padding: 6px 14px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--text); cursor: pointer; }
+    #map-tab button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    #map-tab button:disabled { opacity: 0.5; cursor: default; }
+    #map-tab .buttons { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    #map-tab .up { color: var(--good); } .down { color: var(--bad); }
+    #map-tab .tag { display: inline-block; padding: 0 6px; border-radius: 4px; font-size: 12px; }
+    #map-tab .tag.take { background: color-mix(in srgb, var(--good) 22%, transparent); color: var(--good); }
+    #map-tab .tag.skip { background: color-mix(in srgb, var(--bad) 22%, transparent); color: var(--bad); }
+    #map-tab .scroll { overflow-x: auto; }
+    #map-tab .warn { color: var(--bad); }
+    #map-tab ul.tips { margin: 6px 0; padding-left: 20px; }
+    #map-tab ul.tips li { margin: 3px 0; }
+    #map-tab details summary { cursor: pointer; color: var(--dim); }
+    #map-tab details { margin: 4px 0; }
+    #map-tab details table { margin: 4px 0 8px; }
+    #map-tab .tiers { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 2px 12px; font-size: 13px; }
+    #map-tab .goal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 4px 12px; margin-top: 6px; }
+    #map-tab .goal-grid input { width: 56px; }
+    #map-tab label.radio { cursor: pointer; }
   </style>
   <script>try { if (localStorage.getItem("cheezwatch-theme") === "light") document.documentElement.classList.add("light"); } catch {}</script>
   <script src="vendor/tesseract.min.js"></script>
 </head>
 <body>
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="lab" aria-selected="true">Gauntlet Lab</button>
+    <button role="tab" data-tab="map" aria-selected="false">Map Optimizer</button>
+  </nav>
   <iframe id="lab" src="lab/index.html" title="CheezWatch"></iframe>
+  <div id="map-tab" hidden>
+    <main>
+      <h1>Map Optimizer</h1>
+      <p class="dim">Works out the free location weights your diaries allow, for the most XP per hour in the skills you care about, by simulating thousands of hours of your task queue. Nothing here talks to the game: it only reads screenshots you give it.</p>
+      <div id="map-app"></div>
+    </main>
+  </div>
   <footer>
-    <a href="map.html">Map Optimizer</a>
-    · CheezWatch source: <a href="https://github.com/Skillcheese/CheezWatch" target="_blank" rel="noopener">github.com/Skillcheese/CheezWatch</a>
+    CheezWatch source: <a href="https://github.com/Skillcheese/CheezWatch" target="_blank" rel="noopener">github.com/Skillcheese/CheezWatch</a>
     · Built on <a href="https://github.com/amulder87/gauntlet_lab" target="_blank" rel="noopener">Gauntlet Lab</a> (AGPL-3.0)
     · Not affiliated with ScapeWatch.  </footer>
   <dialog id="feedback">
@@ -61,5 +116,7 @@
   <script type="module" src="app.js"></script>
   <script type="module" src="feedback.js"></script>
   <script type="module" src="theme.js"></script>
+  <script type="module" src="tabs.js"></script>
+  <script type="module" src="map.js"></script>
 </body>
 </html>

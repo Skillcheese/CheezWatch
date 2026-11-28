@@ -22,8 +22,9 @@ const fmt = (n) => (n == null || !isFinite(n) ? "–" : Math.round(n).toLocaleSt
 const pct = (n) => `${Math.round(n * 100)}%`;
 const signed = (v) => (v > 0 ? `+${v}` : String(v));
 
-const app = document.getElementById("app");
-const saved = (() => { try { return JSON.parse(localStorage.getItem(PROFILE_KEY)); } catch { return null; } })();
+const app = document.getElementById("map-app");
+const readSaved = () => { try { return JSON.parse(localStorage.getItem(PROFILE_KEY)); } catch { return null; } };
+let saved = readSaved();
 const stored = (() => { try { return JSON.parse(localStorage.getItem(KEY)); } catch { return null; } })();
 
 const state = {
@@ -391,7 +392,13 @@ function render() {
   );
 }
 
+// The main-page import may have changed since load, so re-read it on each visit.
+document.addEventListener("cheezwatch-tab", (e) => {
+  if (e.detail === "map") { saved = readSaved(); render(); }
+});
+
 document.addEventListener("paste", (e) => {
+  if (document.body.dataset.tab !== "map") return;
   const files = [...(e.clipboardData?.files ?? [])].filter((f) => f.type.startsWith("image/"));
   if (files.length) { e.preventDefault(); readFiles(files); }
 });

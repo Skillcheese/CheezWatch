@@ -1,6 +1,6 @@
 # Map Optimizer
 
-`standalone/map.html`: recommends the free location (node) weights your
+The Map Optimizer tab on `standalone/index.html` (`map.js`): recommends the free location (node) weights your
 diaries allow, per location or per whole bank area, for the most goal XP/hr.
 
 - Data: `scripts/extract-map-data.js` copies nodes, activities and bank-to-bank
