@@ -64,6 +64,7 @@ test("OCRs the movement line and matches the potion speeds shown", { timeout: 18
     const recognize = async (img) => (await worker.recognize(toPng(img))).data.text;
     for (const [name, want] of Object.entries(EXPECTED)) {
       const got = await readPerks(sample(name), recognize);
+      assert.equal(got.questRewards, name === "Screenshot 2026-11-27 213438", `${name} quest rewards row`);
       assert.ok(got?.consistent, name);
       assert.equal(got.effectiveVigor, want.effectiveVigor, name);
       assert.equal(got.bonusPct.telescopes, want.telescopes, name);

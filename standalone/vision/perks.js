@@ -88,14 +88,19 @@ export function speedWithPotion(perks, potionFraction = 0) {
   return Math.round(perks.stepsPerSec * (1 + b + potionFraction) / (1 + b) * 10) / 10;
 }
 
-/** `recognize(imageData) → Promise<text>`. Returns the first consistent reading, else the most complete one, else null. */
+/**
+ * `recognize(imageData) → Promise<text>`. Returns the first consistent reading, else the most complete one, else null.
+ * `questRewards` says whether the Quest Rewards row (with the Globes of Skills) was on the page.
+ */
 export async function readPerks(img, recognize) {
-  let best = null;
+  let best = null, questRewards = false;
   for (const [scale, level] of ATTEMPTS) {
-    const got = parseMovementLine(await recognize(binarize(img, scale, level)));
+    const text = await recognize(binarize(img, scale, level));
+    questRewards ||= /Quest\s*Rew/i.test(text);
+    const got = parseMovementLine(text);
     if (!got) continue;
-    if (got.consistent) return got;
+    if (got.consistent) return { ...got, questRewards };
     if (!best || Object.keys(got.bonusPct).length > Object.keys(best.bonusPct).length) best = got;
   }
-  return best;
+  return best && { ...best, questRewards };
 }

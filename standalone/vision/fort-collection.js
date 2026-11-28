@@ -123,7 +123,7 @@ const SCALES = Array.from({ length: 23 }, (_, i) => 0.7 + i * 0.01);
 const masked = (fx, fy) => (fx < 0.34 && fy < 0.34) || (fx < 0.46 && fy > 0.64);
 
 // Cell background, from a strip just inside the frame's right edge.
-function cellBackground(img, box) {
+export function cellBackground(img, box) {
   const v = [[], [], []];
   const x = box.x + box.size - 4;
   for (let y = box.y + Math.round(box.size * 0.2); y < box.y + box.size * 0.8; y++) {
@@ -154,7 +154,7 @@ function cost(img, box, bg, ref, scale, dx, dy) {
   return count ? sum / count : 255;
 }
 
-function bestCost(img, box, bg, ref, scale) {
+export function bestCost(img, box, bg, ref, scale) {
   let best = Infinity;
   for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) best = Math.min(best, cost(img, box, bg, ref, scale, dx, dy));
   return best;

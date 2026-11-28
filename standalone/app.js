@@ -9,6 +9,7 @@ import { FORT_ITEM_IDS, readFortCollection } from "./vision/fort-collection.js";
 import { FORTIFY_OCR_PARAMS, readFortifySummary } from "./vision/fortify-summary.js";
 import { PERKS_OCR_PARAMS, readPerks } from "./vision/perks.js";
 import { classifyScreenshot, KINDS } from "./vision/classify.js";
+import { GLOBE_IDS, readGlobes } from "./vision/quest-rewards.js";
 import { computeProfile, FORT_FAMILIES, FORT_TIERS, GLOBES, globesFromPerks, POTIONS } from "./calc.js";
 import { dropsSection, mostLikelyWave } from "./lib/rare-drops.js";
 import { depositsSection } from "./lib/deposits.js";
@@ -18,7 +19,7 @@ import { LAB_STORAGE_KEY, applyBackpackSize, applyMovementSpeed, applyRoleTiers,
 const FONT_FAMILY = "ChakraPetchGame";
 const POTION_LABELS = { none: "None", swift: "Swift (+15%)", fleet: "Fleet (+30%)", haste: "Haste (+50%)" };
 const POTION_KEY = "standalone-import-potion";
-const GLOBE_LABELS = { none: "None", t1: "T1", t2: "T2", both: "T1 + T2" };
+const GLOBE_LABELS = { none: "none", t1: "T1", t2: "T2", both: "T1 and T2" };
 const GLOBES_KEY = "standalone-import-globes";
 const EXAMPLES_KEY = "standalone-import-examples-open";
 // What each screenshot should look like, shown on request.
@@ -27,7 +28,7 @@ const EXAMPLES = [
   ["skills", "Skills panel", "Every skill box and the total. A whole game window works too."],
   ["fortress", "Fortress collection", "Collections → The Fortress, opened."],
   ["fortify", "Fortify Tree", "The stat summary in the top-left corner must show."],
-  ["perks", "Perks", "Scrolled so the Total Movement Speed line shows."],
+  ["perks", "Perks", "Scrolled so the Total Movement Speed line and the Quest Rewards row (Globes of Skills) show."],
 ];
 const FORT_KEY = "standalone-import-fort";
 const TALENTS_KEY = "standalone-import-talents";
@@ -141,6 +142,21 @@ async function toBlob(img) {
   return canvas.convertToBlob();
 }
 
+let questAssets;
+function loadQuestAssets() {
+  questAssets ??= (async () => {
+    const refs = {};
+    await Promise.all(GLOBE_IDS.map(async (id) => {
+      const res = await fetch(`icons/quest/${id}.png`);
+      if (!res.ok) throw new Error(`Missing icons/quest/${id}.png. Run: node scripts/extract-icons.js <path to app.asar>`);
+      refs[id] = await decode(await res.blob());
+    }));
+    return refs;
+  })();
+  questAssets.catch(() => { questAssets = undefined; });
+  return questAssets;
+}
+
 let fortAssets;
 function loadFortAssets() {
   fortAssets ??= (async () => {
@@ -181,6 +197,7 @@ async function analyze(kind, img) {
     const worker = await ocrWorker(PERKS_OCR_PARAMS);
     const result = await readPerks(img, async (part) => (await worker.recognize(await toBlob(part))).data.text);
     if (!result) throw new Error("No \"Total Movement Speed\" line found. Scroll the Unlocks page to Perks.");
+    if (result.questRewards) result.globes = readGlobes(img, await loadQuestAssets());
     return { result };
   }
   const { refs, templates } = await loadAssets();
@@ -202,8 +219,9 @@ function store(kind, { result, collections }) {
   } else if (kind === "perks" && result.consistent) {
     state.perksSaved = result;
     try { localStorage.setItem(PERKS_KEY, JSON.stringify(result)); } catch {}
-    // The movement line lists the Globes once owned, so it can set the picker.
-    const globes = globesFromPerks(result);
+    // Owned Globes are framed in the Quest Rewards row; without the row,
+    // the movement line's globe term (once owned) still tells.
+    const globes = result.globes ?? globesFromPerks(result);
     if (globes) setGlobes(globes);
   }
 }
@@ -362,7 +380,6 @@ const CSS = `
 .swi-bad { color: #b91c1c !important; }
 .swi-side { display: flex; flex-direction: column; gap: 6px; justify-content: center; }
 .swi-side select { padding: 4px 6px; }
-.swi-side label { display: flex; flex-direction: column; gap: 4px; }
 .swi-ex-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-top: 8px; }
 .swi-ex-grid figure { margin: 0; }
 .swi-ex-grid img { width: 100%; height: 180px; object-fit: contain; background: #0f172a; border: 1px solid #d8dee8; border-radius: 6px; display: block; }
@@ -504,6 +521,8 @@ function card() {
     ...(state.skills?.result?.warnings ?? []),
     ...(state.unlocks?.result?.warnings ?? []),
     ...(state.fortress?.result?.warnings ?? []),
+    state.perks?.result && !state.perks.result.questRewards && !state.perks.result.globes
+      ? "The Quest Rewards row wasn't in the Perks screenshot, so the Globes of Skills weren't checked. Scroll down until it shows too." : null,
     state.perks?.result && !state.perks.result.consistent ? "The movement line didn't add up to its steps/sec, so it wasn't used. Try a sharper screenshot." : null,
     state.fortify?.result?.unread ? `Couldn't read ${state.fortify.result.unread} line(s) of the Fortify Tree summary; they count as 0.` : null,
     state.unlocks?.result && !state.unlocks.busy && !state.unlocks.collections ? "Couldn't read the Collections count above the grid; the collector bonus counts as 0." : null,
@@ -518,12 +537,6 @@ function card() {
     o.selected = k === state.potion;
     return o;
   }));
-  const globes = h("select", { onchange: (e) => { setGlobes(e.target.value); applySoon(); } },
-    Object.keys(GLOBES).map((k) => {
-      const o = h("option", { value: k }, GLOBE_LABELS[k]);
-      o.selected = k === state.globes;
-      return o;
-    }));
   const el = h("section", {
     class: "swi", id: "swi-card",
     // Several files dropped anywhere on the card are sorted out like a folder.
@@ -544,16 +557,17 @@ function card() {
       zone("skills", "Skills panel", "All skill boxes and the total level."),
       zone("fortress", "Fortress collection", "Collections → The Fortress, opened, with Milestone Rewards and Rare Drops."),
       zone("fortify", "Fortify Tree", "Collections → Fortify Tree, with the stat summary in the top-left corner."),
-      zone("perks", "Unlocks → Perks", "Scroll the Unlocks page to Perks so the Total Movement Speed line shows."),
-      h("div", { class: "swi-side" },
-        h("label", {}, "Movement potion ", potion),
-        h("label", { title: "Quest rewards from the Mastery trials. Each gives auto-process and auto-bank chance (5% / 10%) to every role." }, "Globes of Skills ", globes))),
+      zone("perks", "Unlocks → Perks", "Scroll the Unlocks page to Perks so the Total Movement Speed line and the Quest Rewards row show."),
+      h("label", { class: "swi-side" }, "Movement potion", potion)),
     examples(),
     fortPicker(),
     warnings.length ? h("ul", { class: "swi-warn" }, warnings.map((w) => h("li", {}, w))) : null,
     h("p", {}, state.perksSaved
       ? "Movement speed comes from the Perks screenshot (telescopes and compasses included)."
       : "Without the Perks screenshot, movement leaves out telescopes and compasses."),
+    h("p", {}, `Globes of Skills: ${GLOBE_LABELS[state.globes]}`
+      + (state.globes !== "none" ? ` (+${Math.round(GLOBES[state.globes] * 100)}% auto-process and auto-bank on every role)` : "")
+      + ". Read from the Quest Rewards row of the Perks screenshot."),
     details());
   return el;
 }

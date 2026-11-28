@@ -26,6 +26,13 @@ const fort = listPackage(asar).filter((p) => fortRe.test(p));
 for (const p of fort) {
   fs.writeFileSync(path.join(fortOut, path.basename(p)), extractFile(asar, p.replace(/^[\\/]/, "")));
 }
+// Quest rewards whose ownership the Perks screenshot shows (Globes of Skills).
+const questOut = path.join(out, "quest");
+fs.mkdirSync(questOut, { recursive: true });
+const quest = listPackage(asar).filter((p) => /[\\/]assets[\\/]icons[\\/]items[\\/](globe_of_skills_t[12]|quest_cape)\.png$/.test(p));
+for (const p of quest) {
+  fs.writeFileSync(path.join(questOut, path.basename(p)), extractFile(asar, p.replace(/^[\\/]/, "")));
+}
 const font = path.join("assets", "fonts", "ChakraPetch-Bold.ttf");
 fs.writeFileSync(path.join(out, path.basename(font)), extractFile(asar, font));
-console.log(`Copied ${icons.length} skill icons, ${fort.length} Fortress icons and the digit font to ${path.relative(process.cwd(), out)}`);
+console.log(`Copied ${icons.length} skill icons, ${fort.length} Fortress icons, ${quest.length} quest icons and the digit font to ${path.relative(process.cwd(), out)}`);

@@ -4,7 +4,7 @@ Status: Done
 Created: 2026-11-12
 
 ## Goal
-Put the CheezWatch static site on the shared OVH VPS at `https://cheezwatch.nullptrscape.com`, served through the existing Cloudflare Tunnel, without opening ports or disturbing the StellarCoreGame stack on that box. Add a repeatable deploy script with rollback.
+Put the CheezWatch static site on the shared OVH VPS at `https://cheezwatch.nullptrscape.com`, served through the existing Cloudflare Tunnel, without opening ports or disturbing the NullPtrScape stack on that box. Add a repeatable deploy script with rollback.
 
 ## Decisions
 - **The server only serves static files.** All work (OCR with tesseract, profile calcs, Gauntlet Lab sims) runs in the user's browser on their own PC. No server-side code, API, upload endpoint, Node process, or proxy on the VPS; nginx is a pure `root` + `try_files` file server. Don't add anything that runs per-request computation or accepts uploads. This already matches the app: it is plain ES modules + wasm with no backend.
@@ -16,7 +16,7 @@ Put the CheezWatch static site on the shared OVH VPS at `https://cheezwatch.null
 - One-time server setup is done by hand over SSH (documented in `docs/vps.md`), not by the deploy script. The deploy script never touches nginx or cloudflared config.
 
 ## How it works now
-- `docs/vps.md` — full box description (read sections "What already runs there", "How traffic gets in", "Gotchas"). Key facts: SSH as `ubuntu` with key `~/.ssh/stellar_deploy` on a non-standard port; `ubuntu` has sudo; tunnel `stellar-vps` config at `/etc/cloudflared/config.yml` with one rule `auth.nullptrscape.com → https://localhost:7287` then `http_status:404`; restarting cloudflared briefly drops game logins.
+- `docs/vps.md` — full box description (read sections "What already runs there", "How traffic gets in", "Gotchas"). Key facts: SSH as `ubuntu` with key `~/.ssh/nullptrscape_deploy` on a non-standard port; `ubuntu` has sudo; tunnel `nullptrscape-vps` config at `/etc/cloudflared/config.yml` with one rule `auth.nullptrscape.com → https://localhost:7287` then `http_status:404`; restarting cloudflared briefly drops game logins.
 - `scripts/vps.env` (gitignored) holds `VPS_SSH` (user@host), `VPS_PORT`, `VPS_KEY` (key path). Plain `KEY=value` lines plus `#` comments. **Never print or commit the values.**
 - `scripts/bundle-site.js` — `npm run build:site` wipes `site/` and copies `standalone/` into it (skipping `*.test.js`). It exits 1 if `standalone/lab/index.html`, `standalone/vendor/tesseract.min.js` or `standalone/icons/fort` is missing (those come from `standalone.cmd` / `build:lab`, `extract-icons.js`, `build:standalone`). Note: the current `site/` on disk is stale (old layout with `extension/`, `standalone/`); a fresh `build:site` fixes that.
 - Bundle is ~34 MB: js, png, wasm (4), one `.gz` (tesseract `eng.traineddata.gz`, fetched and gunzipped by tesseract itself — must be served as a plain file with no `Content-Encoding`), one `.ttf`, json, css, html.
@@ -74,7 +74,7 @@ Put the CheezWatch static site on the shared OVH VPS at `https://cheezwatch.null
       - hostname: cheezwatch.nullptrscape.com
         service: http://localhost:8090
     ```
-    `cloudflared tunnel ingress validate --config /etc/cloudflared/config.yml` (use `sudo` if the config/creds need it), then `cloudflared tunnel route dns stellar-vps cheezwatch.nullptrscape.com` (run as `ubuntu`; it uses `/home/ubuntu/.cloudflared/cert.pem`), then `sudo systemctl restart cloudflared`. Immediately check `curl -s -o /dev/null -w "%{http_code}" https://auth.nullptrscape.com/api/Worlds` → **401**; if not, restore the backup and restart.
+    `cloudflared tunnel ingress validate --config /etc/cloudflared/config.yml` (use `sudo` if the config/creds need it), then `cloudflared tunnel route dns nullptrscape-vps cheezwatch.nullptrscape.com` (run as `ubuntu`; it uses `/home/ubuntu/.cloudflared/cert.pem`), then `sudo systemctl restart cloudflared`. Immediately check `curl -s -o /dev/null -w "%{http_code}" https://auth.nullptrscape.com/api/Worlds` → **401**; if not, restore the backup and restart.
 - [x] 4. **Docs** — `docs/vps.md`: replace "Not set up yet. The plan that fits the box:" section with the as-built setup (nginx not Caddy, the server block, `npm run deploy` / `--rollback`, icons are public). Add a line to the `CLAUDE.md` Commands block: `npm run deploy          # build site/ and push it to the VPS (--rollback to undo)`, and `README.md` if it lists commands.
 - [x] 5. Commit (script, package.json, docs) with a short imperative subject and the Co-Authored-By trailer. Make sure `scripts/vps.env` and `site/` are not staged.
 
@@ -89,7 +89,7 @@ Put the CheezWatch static site on the shared OVH VPS at `https://cheezwatch.null
 - `standalone/app.js`, `calc.js`, `lib/`, `vision/` — app logic, unaffected.
 - `gauntlet_lab/` — upstream submodule, only built by `build:lab`.
 - `scripts/extract-icons.js`, `copy-lab.js`, `copy-tesseract.js` — just prerequisites that `bundle-site.js` already checks for.
-- StellarCoreGame repo — only its constraints matter, and they're summarized in `docs/vps.md`.
+- NullPtrScape repo — only its constraints matter, and they're summarized in `docs/vps.md`.
 
 ## Risks / open questions
 - Restarting cloudflared briefly drops game logins; do it at a quiet time and confirm with the user first.

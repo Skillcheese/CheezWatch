@@ -22,7 +22,7 @@ Let players send feedback from the site. A "Send feedback" link in the page foot
 - `standalone/index.html` is 25 lines in total: the Lab iframe (`id="lab"`, line 17), a `<footer>` (lines 18–22) holding source/credit links separated by ` · `, and `<script type="module" src="app.js">` (line 23). Inline `<style>` (lines 7–13) uses system-ui at 12px for the footer, colour `#555`, links `#2a5db0`, and background `#f5f7fa`.
 - `scripts/bundle-site.js` copies all of `standalone/` into `site/` (skipping `*.test.js`), so a new `standalone/feedback.js` ships automatically.
 - `scripts/deploy-vps.js` pushes `site/` to the VPS. It is unaffected because the Worker is deployed separately with wrangler.
-- Hosting and DNS facts are in `docs/vps.md`. DNS for `nullptrscape.com` is on Cloudflare, and `cheezwatch.nullptrscape.com` is a proxied CNAME to the `stellar-vps` tunnel. Workers routes therefore work on it.
+- Hosting and DNS facts are in `docs/vps.md`. DNS for `nullptrscape.com` is on Cloudflare, and `cheezwatch.nullptrscape.com` is a proxied CNAME to the `nullptrscape-vps` tunnel. Workers routes therefore work on it.
 - Tests: `npm test` = `node --test standalone/*.test.js standalone/lib/*.test.js standalone/vision/*.test.js`.
 
 ## Steps

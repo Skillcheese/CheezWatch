@@ -1,6 +1,6 @@
 # VPS hosting notes
 
-The site can be hosted on the same OVH VPS that runs the StellarCoreGame ("Bots in Space") production stack. That repo owns the box: its runbook is `StellarCoreGame/Docs/Deploy.md` and its setup files are `StellarCoreGame/Tools/vps/`. This page covers only what you need to put a static site on it without breaking the game.
+The site can be hosted on the same OVH VPS that runs the NullPtrScape production stack. That repo owns the box: its runbook is `NullPtrScape/Docs/Deploy.md` and its setup files are `NullPtrScape/Tools/vps/`. This page covers only what you need to put a static site on it without breaking the game.
 
 Connection values (IP, SSH port, key path) are in `scripts/vps.env`, which is gitignored. This repo has a GitHub remote, so never commit them, and never commit any secrets.
 
@@ -12,14 +12,14 @@ Connection values (IP, SSH port, key path) are in `scripts/vps.env`, which is gi
 ## What already runs there (don't touch)
 | Piece | Where |
 |---|---|
-| AuthAPI | `127.0.0.1:7287`, systemd unit `stellar-authapi` |
-| GameApi | `127.0.0.1:8443`, unit `stellar-gameapi` |
-| World server(s) | UDP 7770–7800, units `stellar-world@N` |
+| AuthAPI | `127.0.0.1:7287`, systemd unit `nullptrscape-authapi` |
+| GameApi | `127.0.0.1:8443`, unit `nullptrscape-gameapi` |
+| World server(s) | UDP 7770–7800, units `nullptrscape-world@N` |
 | MySQL, Redis | 127.0.0.1 only |
 | cloudflared | unit `cloudflared`, outbound only |
 
-- Game files live in `/opt/stellar/`, secrets in `/etc/stellar/`, the service user is `stellar`. Leave all of these alone.
-- `/opt/stellar/bin/stellar-activate` and `/etc/sudoers.d/stellar-deploy` belong to the game's deploy script.
+- Game files live in `/opt/nullptrscape/`, secrets in `/etc/nullptrscape/`, the service user is `nullptrscape`. Leave all of these alone.
+- `/opt/nullptrscape/bin/nullptrscape-activate` and `/etc/sudoers.d/nullptrscape-deploy` belong to the game's deploy script.
 - Memory is tight (4 GB, the game uses most of it). A static site served by a tiny server is fine; don't add anything heavy.
 
 ## How traffic gets in
@@ -28,10 +28,10 @@ There is **no inbound HTTP(S) port**, and none should be opened. Two firewalls:
 - **ufw** on the box: allows the SSH port and 7770:7800/udp, denies the rest.
 
 Public web traffic comes in through a **Cloudflare Tunnel** (`cloudflared`):
-- Tunnel name `stellar-vps`, **locally managed** (made with the `cloudflared` CLI on the VPS, not in the Cloudflare dashboard).
+- Tunnel name `nullptrscape-vps`, **locally managed** (made with the `cloudflared` CLI on the VPS, not in the Cloudflare dashboard).
 - Config: `/etc/cloudflared/config.yml`. Credentials JSON: `/etc/cloudflared/<tunnel-id>.json`. Origin cert: `/home/ubuntu/.cloudflared/cert.pem`.
 - Today it has one ingress rule: `auth.nullptrscape.com` → `https://localhost:7287` (`noTLSVerify: true`), then a catch-all `http_status:404`.
-- DNS for `nullptrscape.com` is on Cloudflare. Hostnames are added with `cloudflared tunnel route dns stellar-vps <hostname>`, which makes a proxied CNAME to `<tunnel-id>.cfargotunnel.com`.
+- DNS for `nullptrscape.com` is on Cloudflare. Hostnames are added with `cloudflared tunnel route dns nullptrscape-vps <hostname>`, which makes a proxied CNAME to `<tunnel-id>.cfargotunnel.com`.
 
 ## Adding the website (recommended setup)
 The server only serves static files; OCR, calcs and sims all run in the visitor's browser.
@@ -55,11 +55,11 @@ The server only serves static files; OCR, calcs and sims all run in the visitor'
    - hostname: cheezwatch.nullptrscape.com
      service: http://localhost:8090
    ```
-   DNS via `cloudflared tunnel route dns stellar-vps cheezwatch.nullptrscape.com`. Restarting cloudflared briefly drops game logins, so check afterwards that `https://auth.nullptrscape.com/api/Worlds` still returns **401**.
+   DNS via `cloudflared tunnel route dns nullptrscape-vps cheezwatch.nullptrscape.com`. Restarting cloudflared briefly drops game logins, so check afterwards that `https://auth.nullptrscape.com/api/Worlds` still returns **401**.
 
-Hostname: `cheezwatch.nullptrscape.com` (same Cloudflare zone and account as the game, so it shares the `stellar-vps` tunnel).
+Hostname: `cheezwatch.nullptrscape.com` (same Cloudflare zone and account as the game, so it shares the `nullptrscape-vps` tunnel).
 
 ## Gotchas
 - The SSH key prompt: if a key has a passphrase, pressing Enter silently falls back to password login. Scripts must use `nullptrscape_deploy`.
 - The edge firewall is stateless: anything new that the box calls *out* to over UDP needs a source-port reply rule. TCP replies are already covered.
-- Don't edit the game's systemd units, `/etc/stellar`, or the existing ingress rule. If in doubt, ask.
+- Don't edit the game's systemd units, `/etc/nullptrscape`, or the existing ingress rule. If in doubt, ask.
