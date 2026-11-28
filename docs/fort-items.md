@@ -14,7 +14,7 @@ Every family has 7 tiers: T1–T5, then Chaos C6 and C7. In `items.json`, the `t
 | Swift Beacon | `beacon_swift_*` | +0.5% × (i+1) movement | +14% move |
 | Sure Beacon | `beacon_sure_*` | +1% success (one success source) | +7% |
 | Bounty Beacon | `beacon_bounty_*` | +1% double-gather (one double source) | +7% |
-| Thrift Beacon | `beacon_thrift_*` | +0.5% material save (one save source) | **material save** (a failed process keeps its raw) |
+| Thrift Beacon | `beacon_thrift_*` | +0.5% material save (one save source) | **material save** (a saved raw goes to a hidden stash and deposits at value ÷ 3) |
 
 Every beacon also gives +0.25% XP, Ledgers and Banners give +0.25% × (i+1) XP, and the Enchanted Fortification (the Fortify tool, T1–C6) gives +1% × (i+1). `calc.js` `xpBonus` adds these to the Fortify Tree, lantern, cape/pet, telescope and compass XP, and the page scales the Lab's per-action XP by the total.
 

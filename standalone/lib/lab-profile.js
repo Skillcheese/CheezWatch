@@ -74,8 +74,8 @@ export function applyMovementSpeed(state, speed) {
 // Gauntlet divides it by GAUNTLET_HASTE (10). Success is 70% + 1% per level
 // over the node's requirement + 1% per source; each 1% over 100 cuts 0.05s.
 // Reduction past the 2.0s floor turns into +3% double per second (gather)
-// or +1.5% material save per second (process). Save keeps the raw resource
-// when a Fortress process fails.
+// or +1.5% material save per second (process). A save puts a raw in a hidden
+// stash that deposits at value / 3 in the Fortress.
 const BASE_DURATION = 10;
 const LEVEL_CUT = 0.01;
 const MIN_DURATION = 2.0;
