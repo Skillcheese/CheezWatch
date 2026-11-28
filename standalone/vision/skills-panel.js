@@ -77,6 +77,35 @@ export function findSkillBoxes(img) {
   return boxes.filter((b) => Math.abs(b.h - typical) <= typical * 0.25 && b.w >= b.h * 1.2);
 }
 
+// The panel has 30 skill boxes and the total.
+const PANEL_BOXES = 31;
+
+/**
+ * Like findSkillBoxes, but also works on a whole game window, where the map
+ * outweighs the panel's background colour: if the full image has no panel,
+ * windows around the panel's size are searched. Boxes are in image coordinates.
+ */
+export function findSkillPanel(img) {
+  let best = findSkillBoxes(img);
+  if (best.length >= PANEL_BOXES) return best;
+  const { width: w, height: h } = img;
+  for (const [fw, fh] of [[0.25, 0.55], [0.33, 0.7], [0.5, 1]]) {
+    const cw = Math.round(w * fw), ch = Math.round(h * fh);
+    const sx = Math.max(1, Math.round(cw / 3)), sy = Math.max(1, Math.round(ch / 3));
+    const xs = [], ys = [];
+    for (let x = w - cw; x > 0; x -= sx) xs.push(x);
+    xs.push(0);
+    for (let y = h - ch; y > 0; y -= sy) ys.push(y);
+    ys.push(0);
+    for (const y of ys) for (const x of xs) {
+      const boxes = findSkillBoxes(crop(img, x, y, cw, ch)).map((b) => ({ ...b, x: b.x + x, y: b.y + y }));
+      if (boxes.length >= PANEL_BOXES) return boxes;
+      if (boxes.length > best.length) best = boxes;
+    }
+  }
+  return best;
+}
+
 /** Splits a box into the icon square on its left and the number area on its right. */
 export function splitBox(img, box) {
   // Inset past the box's frame, which some themes draw in a contrasting colour.

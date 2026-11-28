@@ -46,6 +46,17 @@ test("reads the brown Fortress collection", { skip }, () => {
   });
 });
 
+test("reads the Fortress collection after the Q1 update", { skip }, () => {
+  const r = readFortCollection(sample("Screenshot 2026-11-27 212102"), references());
+  assert.equal(r.items.length, 43); // 8 + 35
+  assert.ok(r.items.every((i) => i.id));
+  assert.deepEqual(plain(r.owned), {
+    banner: ["T1", "T2", "T3", "T4"], ledger: ["T1", "T2", "T3", "T4"],
+    haste: ["T1", "T2", "T3"], bounty: ["T1", "T2", "T3"], thrift: ["T1", "T2", "T3", "T4"],
+    sure: ["T1", "T2", "T3"], swift: ["T1", "T2", "T3"], satchel: ["T1", "T2", "T3"], fortification: ["T1", "T2", "T3"],
+  });
+});
+
 test("rejects screenshots of other screens", { skip }, () => {
   for (const name of ["unlocks-blue", "unlocks-brown", "skills-brown"]) {
     assert.throws(() => readFortCollection(sample(name), references()), /The Fortress/, name);

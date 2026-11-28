@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { backpackSize, computeProfile, movementSpeed, unlockSummaries, fortBonuses, talentBonuses, xpBonus } from "./calc.js";
+import { globesFromPerks, backpackSize, computeProfile, movementSpeed, unlockSummaries, fortBonuses, talentBonuses, xpBonus } from "./calc.js";
 import { vigorBaseSpeed } from "./lib/lab-profile.js";
 
 const owned = (o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, new Set(v.split(" ").filter(Boolean))]));
@@ -123,4 +123,21 @@ test("material save adds half a point per source plus Thrift, talents and the co
   const fort = { ledger: new Set(["T1", "T2"]), thrift: new Set(["T1", "T2", "T3"]) };
   const u = unlockSummaries({ owned: {}, levels: { vigor: -1 }, fort, talents: { saveMaterialPct: 1.25 }, collectorFraction: 0.5 });
   close(u.cook.save, 2 * 0.5 + 3 * 0.5 + 1.25 + 5);
+});
+
+test("Q1 quest tools count like D1: 0.1s, one source, the T1 lantern XP", () => {
+  const u = unlockSummaries({ owned: owned({ levels: "Q1", fish: "Q1" }), levels: { vigor: -1 } });
+  close(u.all_skills.all_durations, -0.1);
+  close(u.fish.duration, -0.2);
+  close(u.fish.success, 2);
+  close(xpBonus({ owned: owned({ levels: "Q1" }) }).parts.lanterns, 0.5);
+});
+
+test("Globes of Skills set auto-process on every role and come from the Perks line", () => {
+  const p = computeProfile({ owned: {}, levels: {}, globes: "both" });
+  for (const r of Object.values(p.roleStats)) { close(r.auto_process, 0.15); close(r.auto_bank, 0.15); }
+  close(computeProfile({ owned: {}, levels: {} }).roleStats.Health.auto_process, 0);
+  assert.equal(globesFromPerks({ bonusPct: { globes: 10 } }), "t2");
+  assert.equal(globesFromPerks({ bonusPct: {} }), null);
+  assert.ok(Math.abs(movementSpeed(50, "none", 0, {}, {}, "t1") / movementSpeed(50) - 1.05) < 0.005);
 });

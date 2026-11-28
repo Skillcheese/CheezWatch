@@ -58,7 +58,7 @@ The user's choices:
 Formulas, as implemented in `standalone/calc.js`:
 - **Duration.** Base `10 - 0.01*(level-1)`, minus:
   - cape/pet sources × 0.1s, capped at 8 sources. Sources are the own column's pet, shiny_pet, cape and trimmed_cape plus the same rows in the all-skills (`levels`) column.
-  - tool seconds: T1 .1, T2 .1, T3 .2, T4 .3, T5 .4, C6 .6, D1/D2/L1/L2 .1. The own column and the lanterns both count.
+  - tool seconds: T1 .1, T2 .1, T3 .2, T4 .3, T5 .4, C6 .6, D1/D2/Q1/L1/L2 .1. The own column and the lanterns both count. Q1 (quest tools, Nov 2026 update; `qtool` in items.json) borrows the T1 rates for seconds and XP, and its row sits between D2 and L1 on the Unlocks page.
   - vigor `(v+1)*0.005`.
   - collector `1.0*fraction`.
 

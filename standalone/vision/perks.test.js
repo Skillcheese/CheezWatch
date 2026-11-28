@@ -21,6 +21,18 @@ test("parses the Total Movement Speed line", () => {
   assert.equal(parseMovementLine("Compasses +0% XP"), null);
 });
 
+test("counts sources added after the six, like the Globes and Quest Cape", () => {
+  // Blue line plus +5% globes and +10% quest cape: 26.8 × 1.397 / 1.247 ≈ 30.0.
+  const line = BLUE_LINE.replace("+3% fleet foot]", "+3% fleet foot, +5% globes, +10% quest cape]").replace("26.8 steps", "30.0 steps").replace("+168%", "+200%");
+  const r = parseMovementLine(line);
+  assert.equal(r.bonusPct.globes, 5);
+  assert.equal(r.bonusPct.questCape, 10);
+  assert.equal(r.consistent, true);
+  const odd = parseMovementLine(line.replace("globes", "orbs of wonder"));
+  assert.equal(odd.bonusPct.other, 5);
+  assert.equal(odd.consistent, true);
+});
+
 test("parses a whole-number steps/sec", () => {
   const r = parseMovementLine("Total Movement Speed +180% (28 steps/sec) (Vigor lvl 72 (effective 84) base, +10.5% telescopes, +1% compasses (2/11), +1.5% swift beacons, +5% fortress milestones, +5.2% collector, +4% fleet foot)");
   assert.equal(r.stepsPerSec, 28);
@@ -34,6 +46,8 @@ test("parses a whole-number steps/sec", () => {
 const EXPECTED = {
   "perks-blue": { effectiveVigor: 81, telescopes: 9.5, compasses: 1, shown: [26.8, 30, 33.2, 37.5] },
   "perks-brown": { effectiveVigor: 61, telescopes: 7, compasses: 0, shown: [20.4, 23.1, 25.8, 29.4] },
+  "Screenshot 2026-11-27 212115": { effectiveVigor: 90, telescopes: 11, compasses: 2.5, shown: [30.6, 34.1, 37.5, 42.2] },
+  "Screenshot 2026-11-27 213438": { effectiveVigor: 90, telescopes: 11, compasses: 2.5, shown: [30.6, 34.1, 37.5, 42.2] },
 };
 
 const LANG = new URL("../../node_modules/@tesseract.js-data/eng/4.0.0_best_int/", import.meta.url);

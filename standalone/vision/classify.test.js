@@ -27,4 +27,10 @@ test("classifies every sample screenshot", { skip }, () => {
       assert.equal(got.confirmed, kind !== "perks");
     }
   }
+  // Full game windows from after the Q1 update.
+  const q1 = { 212055: "skills", 212102: "fortress", 212108: "unlocks", 212115: "perks", 212118: "fortify" };
+  for (const [n, kind] of Object.entries(q1)) {
+    const got = classifyScreenshot(png(new URL(`../../samples/Screenshot 2026-11-27 ${n}.png`, import.meta.url)), refs, fortRefs);
+    assert.equal(got?.kind, kind, n);
+  }
 });

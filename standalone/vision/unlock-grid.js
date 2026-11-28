@@ -3,11 +3,13 @@
 // here assumes a resolution: the cell pitch comes from the image itself.
 import { luminance, findPitch, findPhase, fitLattice, median } from "./image.js";
 
-// Rows below the skill-icon header, top to bottom.
+// Rows below the skill-icon header, top to bottom. The November 2026 update
+// added the Q1 (quest) tools between D2 and L1; older screenshots lack it.
 export const UNLOCK_ROWS = [
   "pet", "shiny_pet", "cape", "trimmed_cape",
-  "T1", "T2", "T3", "T4", "T5", "C6", "D1", "D2", "L1", "L2",
+  "T1", "T2", "T3", "T4", "T5", "C6", "D1", "D2", "Q1", "L1", "L2",
 ];
+export const LEGACY_UNLOCK_ROWS = UNLOCK_ROWS.filter((r) => r !== "Q1");
 
 const NOT_FOUND = "Couldn't find the unlocks grid in this screenshot.";
 
@@ -141,11 +143,15 @@ export function readUnlockGrid(img) {
 
   const headerRow = block.r0 - 1;
   const header = headerRow >= 0 ? xs.slice(block.c0, block.c1 + 1).map((x) => ({ x, y: ys[headerRow], size })) : [];
+  // A grid that ends a row short of the image edge is complete, so 14 rows
+  // there is a pre-Q1 screenshot; otherwise the bottom was cropped.
+  const seen = block.r1 - block.r0 + 1;
+  const ids = seen === LEGACY_UNLOCK_ROWS.length && block.r1 < ys.length - 1 ? LEGACY_UNLOCK_ROWS : UNLOCK_ROWS;
   const rows = [];
-  for (let r = block.r0; r <= block.r1 && rows.length < UNLOCK_ROWS.length; r++) {
+  for (let r = block.r0; r <= block.r1 && rows.length < ids.length; r++) {
     const cells = [];
     for (let c = block.c0; c <= block.c1; c++) cells.push({ x: xs[c], y: ys[r], size, score: block.scores[r][c] });
-    rows.push({ id: UNLOCK_ROWS[rows.length], cells });
+    rows.push({ id: ids[rows.length], cells });
   }
 
   // Owned frames are far brighter than anything along an unowned cell's edge;

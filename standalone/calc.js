@@ -9,8 +9,16 @@ import { speedWithPotion } from "./vision/perks.js";
 
 export const CAPE_PET_ROWS = ["pet", "shiny_pet", "cape", "trimmed_cape"];
 // Seconds each tool shaves off its skill's actions (lanterns: every skill).
-export const TOOL_SECONDS = { T1: 0.1, T2: 0.1, T3: 0.2, T4: 0.3, T5: 0.4, C6: 0.6, D1: 0.1, D2: 0.1, L1: 0.1, L2: 0.1 };
+export const TOOL_SECONDS = { T1: 0.1, T2: 0.1, T3: 0.2, T4: 0.3, T5: 0.4, C6: 0.6, D1: 0.1, D2: 0.1, Q1: 0.1, L1: 0.1, L2: 0.1 };
 export const POTIONS = { none: 0, swift: 0.15, fleet: 0.3, haste: 0.5 };
+// Globes of Skills owned (Constants.GLOBE_OF_SKILLS; owning both stacks).
+// Each gives the same fraction as movement speed, auto-process and auto-bank chance.
+export const GLOBES = { none: 0, t1: 0.05, t2: 0.1, both: 0.15 };
+/** Which Globes the Perks line's globe term implies (+5% T1, +10% T2, +15% both), or null. */
+export function globesFromPerks(perks) {
+  const pct = perks?.bonusPct?.globes;
+  return Object.keys(GLOBES).find((k) => Math.abs(GLOBES[k] * 100 - (pct ?? -1)) < 0.01) ?? null;
+}
 // Fortress (Gauntlet) unlocks: seven tiers per family, bonuses scale with
 // the tier's position (T1 = 1 ... C7 = 7). See docs/fort-items.md.
 // Satchels give no stat bonus; each owned tier adds backpack slots.
@@ -117,7 +125,7 @@ const XP = {
   milestonePerTier: 0.25, beacon: 0.25,
   // Fortify reads the doubled tool curve (DOUBLED_TOOL_SKILLS).
   fortification: { T1: 1, T2: 2, T3: 3, T4: 4, T5: 5, C6: 6 },
-  lantern: { T1: 0.5, T2: 1, T3: 1.5, T4: 2, T5: 2.5, C6: 3, D1: 0.5, L1: 0.5, D2: 1, L2: 1 },
+  lantern: { T1: 0.5, T2: 1, T3: 1.5, T4: 2, T5: 2.5, C6: 3, D1: 0.5, Q1: 0.5, L1: 0.5, D2: 1, L2: 1 },
   capePet: { pet: 0.25, cape: 0.25, shiny_pet: 0.5, trimmed_cape: 0.5 },
 };
 
@@ -147,8 +155,8 @@ export function xpBonus({ owned = {}, fort = {}, talents = {}, perks } = {}) {
 }
 
 /** Movement speed in px/s from vigor, the active potion, the collector, Fortress items and Fleet Foot. */
-export function movementSpeed(vigorLevel, potion = "none", collectorFraction = 0, fort, talents) {
-  const bonus = (POTIONS[potion] ?? 0) + COLLECTOR.move * collectorFraction + fortBonuses(fort).move + talentBonuses(talents).move;
+export function movementSpeed(vigorLevel, potion = "none", collectorFraction = 0, fort, talents, globes = "none") {
+  const bonus = (POTIONS[potion] ?? 0) + (GLOBES[globes] ?? 0) + COLLECTOR.move * collectorFraction + fortBonuses(fort).move + talentBonuses(talents).move;
   return Math.round(vigorBaseSpeed(vigorLevel) * (1 + bonus) * 10) / 10;
 }
 
@@ -163,18 +171,23 @@ export function backpackSize(fort) {
  * `perks` (vision/perks.js) is the game's own movement breakdown, telescopes
  * and compasses included; when given, it replaces the estimate.
  */
-export function computeProfile({ owned, levels, collectorFraction = 0, potion = "none", fort, talents, perks }) {
+export function computeProfile({ owned, levels, collectorFraction = 0, potion = "none", fort, talents, perks, globes = "none" }) {
   const unlocks = unlockSummaries({ owned, levels, collectorFraction, fort, talents });
   const roleTiers = {};
   for (const [role, { gather, process }] of Object.entries(ROLE_SKILLS)) {
     roleTiers[role] = roleTier(role, levels[gather] ?? 1, levels[process] ?? 1);
   }
+  // Every Fortress processing skill (cook, smith, craft, imbue, brew) is on
+  // the game's GLOBE_AUTO_PROCESS_SKILLS list, and auto-bank feeds the army
+  // stat directly in the Fortress.
+  const roleStats = roleStatsFromUnlocks(unlocks, levels);
+  for (const r of Object.values(roleStats)) r.auto_process = r.auto_bank = GLOBES[globes] ?? 0;
   return {
     roleTiers,
-    roleStats: roleStatsFromUnlocks(unlocks, levels),
+    roleStats,
     movementSpeed: perks
       ? speedWithPotion(perks, POTIONS[potion] ?? 0)
-      : movementSpeed(levels.vigor ?? 0, potion, collectorFraction, fort, talents),
+      : movementSpeed(levels.vigor ?? 0, potion, collectorFraction, fort, talents, globes),
     backpackSize: backpackSize(fort),
     unlocks,
     xp: xpBonus({ owned, fort, talents, perks }),

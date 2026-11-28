@@ -36,6 +36,7 @@ const toPng = (img) => {
 
 const EXPECTED = {
   "fortify-blue": { moveSpeedPct: 2.75, successPct: 5, saveMaterialPct: 1.25, doubleGatherPct: 10, skillingXpPct: 1.75, fortifyXpPct: 4, actionTimeSec: -0.6, globalXpPct: 3, foodHeal: 0 },
+  "Screenshot 2026-11-27 212118": { moveSpeedPct: 4.75, successPct: 5, saveMaterialPct: 1.25, doubleGatherPct: 10, skillingXpPct: 1.75, fortifyXpPct: 4, actionTimeSec: -0.6, globalXpPct: 3.25, foodHeal: 0 },
   "fortify-brown": { moveSpeedPct: 2.25, successPct: 3.5, saveMaterialPct: 1, doubleGatherPct: 8, skillingXpPct: 4.5, fortifyXpPct: 3.5, actionTimeSec: -0.54, globalXpPct: 1.5, foodHeal: 0 },
 };
 

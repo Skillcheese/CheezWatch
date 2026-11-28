@@ -41,6 +41,13 @@ const SKILLS_EXPECTED = {
   },
 };
 
+// A whole game window from after the Q1 update, panel in the bottom right.
+const Q1_UPDATE = { window: "Screenshot 2026-11-27 212055", unlocks: "Screenshot 2026-11-27 212108" };
+SKILLS_EXPECTED[Q1_UPDATE.window] = {
+  total: 2174,
+  levels: levelsOf([78, 81, 76, 78, 81, 80, 76, 75, 52, 51, 69, 65, 55, 55, 59, 65, 71, 70, 73, 82, 83, 77, 75, 66, 81, 75, 75, 75, 83, 92]),
+};
+
 for (const [name, want] of Object.entries(SKILLS_EXPECTED)) {
   test(`reads every level on ${name}`, { skip }, () => {
     setup();
@@ -70,7 +77,26 @@ const UNLOCKS_EXPECTED = {
     plunder: `pet ${TOOLS3} L1 L2`, barter: `pet ${TOOLS3} L1`, bard: `shiny_pet ${TOOLS3} L1 L2`,
     discover: `${TOOLS3} L1 L2`,
   },
+  // 15 rows: the Q1 row (none owned yet) sits between D2 and L1.
+  [Q1_UPDATE.unlocks]: {
+    levels: "pet T1 T2 T3 T4 L1 L2",
+    life: `${TOOLS3} D1 L1 L2`, spirit: `${TOOLS3} L1 L2`, strike: `pet ${TOOLS3} T4 L1 L2`, heft: `${TOOLS3} T4 L1 L2`,
+    sight: `${TOOLS3} T4`, draw: `${TOOLS3} L1`, focus: `${TOOLS3} T4 D1`, surge: `${TOOLS3} L1`,
+    dodge: `${TOOLS3} D1 L1 L2`, defend: `${TOOLS3} D1 L1 L2`, slay: `pet ${TOOLS3} D2 L1 L2`,
+    vigor: `${TOOLS3} L1 L2`, delve: `pet ${TOOLS3} D1 L1 L2`, fortify: `pet ${TOOLS3} L1 L2`, luck: `pet ${TOOLS3} T4 L1 L2`,
+    alms: `pet ${TOOLS3} L1 L2`, fish: `${TOOLS3} T4 L1 L2`, cook: `pet ${TOOLS3} T4 D1 L1 L2`,
+    mine: `${TOOLS3} T4 L1 L2`, smith: `${TOOLS3} T4 L1 L2`, forage: `${TOOLS3} T4 D1 L1`, craft: `${TOOLS3} T4 D1 D2 L1 L2`,
+    invoke: `${TOOLS3} T4 L1 L2`, imbue: `${TOOLS3} T4 L1 L2`, farm: `${TOOLS3} D1 L1 L2`, brew: `pet ${TOOLS3} L1 L2`,
+    plunder: `pet ${TOOLS3} L1 L2`, barter: `pet ${TOOLS3} L1`, bard: `shiny_pet ${TOOLS3} L1 L2`,
+    discover: `${TOOLS3} L1 L2`,
+  },
 };
+
+test("tells a pre-Q1 grid from a Q1 one", { skip }, () => {
+  setup();
+  assert.ok(!readUnlocksPage(sample("unlocks-blue"), refs).rows.includes("Q1"));
+  assert.equal(readUnlocksPage(sample(Q1_UPDATE.unlocks), refs).rows.length, 15);
+});
 
 for (const [name, want] of Object.entries(UNLOCKS_EXPECTED)) {
   test(`reads every owned cell on ${name}`, { skip }, () => {

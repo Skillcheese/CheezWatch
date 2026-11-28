@@ -22,6 +22,13 @@ const SOURCES = {
   collector: /collec/i,
   fleetFoot: /fleet|foot/i,
 };
+// Sources the line only lists once owned (Globes of Skills, the Quest Cape,
+// Nov 2026). Anything else it lists lands in "other", so a source the game
+// adds later still counts toward the sum instead of failing the check.
+const OPTIONAL = {
+  globes: /glob/i,
+  questCape: /quest|cape/i,
+};
 
 const num = (s) => Number(s.replace(",", "."));
 
@@ -43,9 +50,10 @@ export function parseMovementLine(text) {
   for (const part of line.split("+").slice(1)) {
     const m = /^\s*(\d{1,2}(?:[.,]\d{1,2})?)\s*%\s*([a-z' ]+)/i.exec(part);
     if (!m) continue;
-    for (const [key, re] of Object.entries(SOURCES)) {
-      if (re.test(m[2]) && bonusPct[key] == null) bonusPct[key] = num(m[1]);
-    }
+    const key = Object.keys(SOURCES).find((k) => SOURCES[k].test(m[2]))
+      ?? Object.keys(OPTIONAL).find((k) => OPTIONAL[k].test(m[2])) ?? "other";
+    if (key === "other") bonusPct.other = (bonusPct.other ?? 0) + num(m[1]);
+    else if (bonusPct[key] == null) bonusPct[key] = num(m[1]);
   }
   const effectiveVigor = eff ? Number(eff[1].replace(/B/g, "8").replace(/O/g, "0")) : null;
   const out = {

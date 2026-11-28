@@ -3,9 +3,9 @@
 // so the same code runs in the page and in node tests.
 import { crop } from "./image.js";
 import { assignIcons, referenceFingerprint, screenFingerprint } from "./icons.js";
-import { findSkillBoxes, splitBox } from "./skills-panel.js";
+import { findSkillPanel, splitBox } from "./skills-panel.js";
 import { fixWithTotal, readNumber } from "./digits.js";
-import { readUnlockGrid } from "./unlock-grid.js";
+import { LEGACY_UNLOCK_ROWS, readUnlockGrid, UNLOCK_ROWS } from "./unlock-grid.js";
 
 // Header order on the Unlocks page; "levels" is the all-skills column.
 export const SKILLS = [
@@ -28,7 +28,7 @@ export function iconReferences(images) {
  * near-tie digit had to be changed to make them add up, or "mismatch".
  */
 export function readSkillsPanel(img, refs, templates) {
-  const boxes = findSkillBoxes(img);
+  const boxes = findSkillPanel(img);
   if (boxes.length < 10) throw new Error("Couldn't find the skill boxes in this screenshot.");
   const parts = boxes.map((b) => splitBox(img, b));
   const ids = assignIcons(parts.map((p) => screenFingerprint(p.icon)), refs);
@@ -83,7 +83,8 @@ export function readUnlocksPage(img, refs) {
   });
   const missing = ICON_IDS.filter((s) => !owned[s]);
   if (missing.length) warnings.push(`No column found for: ${missing.join(", ")}.`);
-  if (grid.rows.length < 14) warnings.push(`Only ${grid.rows.length} of 14 unlock rows are visible; the rest count as not owned.`);
+  const full = grid.rows.some((r) => r.id === "Q1") ? UNLOCK_ROWS.length : LEGACY_UNLOCK_ROWS.length;
+  if (grid.rows.length < full) warnings.push(`Only ${grid.rows.length} of ${full} unlock rows are visible; the rest count as not owned.`);
   return { owned, columns, rows: grid.rows.map((r) => r.id), collectionsRect: collectionsRect(img, grid), warnings };
 }
 

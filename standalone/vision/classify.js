@@ -6,7 +6,7 @@
 // back as a candidate that only OCR (readPerks) can confirm.
 import { crop } from "./image.js";
 import { assignIcons, screenFingerprint } from "./icons.js";
-import { findSkillBoxes, splitBox } from "./skills-panel.js";
+import { findSkillPanel, splitBox } from "./skills-panel.js";
 import { readUnlockGrid } from "./unlock-grid.js";
 import { findOwnedFrames, readFortCollection } from "./fort-collection.js";
 import { findSummaryLines } from "./fortify-summary.js";
@@ -18,7 +18,7 @@ export const KINDS = ["unlocks", "skills", "fortress", "fortify", "perks"];
 const SKILL_BOX_DISTANCE = 60;
 
 function looksLikeSkills(img, refs) {
-  const boxes = findSkillBoxes(img);
+  const boxes = findSkillPanel(img);
   if (boxes.length < 25) return false;
   const ids = assignIcons(boxes.map((b) => screenFingerprint(splitBox(img, b).icon)), refs).filter((m) => m.id);
   return ids.length >= 25 && ids.reduce((a, m) => a + m.distance, 0) / ids.length < SKILL_BOX_DISTANCE;

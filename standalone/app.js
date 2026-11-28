@@ -9,7 +9,7 @@ import { FORT_ITEM_IDS, readFortCollection } from "./vision/fort-collection.js";
 import { FORTIFY_OCR_PARAMS, readFortifySummary } from "./vision/fortify-summary.js";
 import { PERKS_OCR_PARAMS, readPerks } from "./vision/perks.js";
 import { classifyScreenshot, KINDS } from "./vision/classify.js";
-import { computeProfile, FORT_FAMILIES, FORT_TIERS, POTIONS } from "./calc.js";
+import { computeProfile, FORT_FAMILIES, FORT_TIERS, GLOBES, globesFromPerks, POTIONS } from "./calc.js";
 import { dropsSection, mostLikelyWave } from "./lib/rare-drops.js";
 import { depositsSection } from "./lib/deposits.js";
 import { mountSwapCard } from "./swap.js";
@@ -18,6 +18,17 @@ import { LAB_STORAGE_KEY, applyBackpackSize, applyMovementSpeed, applyRoleTiers,
 const FONT_FAMILY = "ChakraPetchGame";
 const POTION_LABELS = { none: "None", swift: "Swift (+15%)", fleet: "Fleet (+30%)", haste: "Haste (+50%)" };
 const POTION_KEY = "standalone-import-potion";
+const GLOBE_LABELS = { none: "None", t1: "T1", t2: "T2", both: "T1 + T2" };
+const GLOBES_KEY = "standalone-import-globes";
+const EXAMPLES_KEY = "standalone-import-examples-open";
+// What each screenshot should look like, shown on request.
+const EXAMPLES = [
+  ["unlocks", "Unlocks page", "The whole grid, with the skill icons on top and the Collections count."],
+  ["skills", "Skills panel", "Every skill box and the total. A whole game window works too."],
+  ["fortress", "Fortress collection", "Collections → The Fortress, opened."],
+  ["fortify", "Fortify Tree", "The stat summary in the top-left corner must show."],
+  ["perks", "Perks", "Scrolled so the Total Movement Speed line shows."],
+];
 const FORT_KEY = "standalone-import-fort";
 const TALENTS_KEY = "standalone-import-talents";
 const PERKS_KEY = "standalone-import-perks";
@@ -33,6 +44,7 @@ const frame = document.getElementById("lab");
 
 const state = {
   potion: load(POTION_KEY) ?? "none",
+  globes: GLOBES[load(GLOBES_KEY)] != null ? load(GLOBES_KEY) : "none",
   fort: loadFort(),
   unlocks: null, // { result, collections, error, busy, name }
   skills: null,  // { result, error, busy, name }
@@ -190,6 +202,9 @@ function store(kind, { result, collections }) {
   } else if (kind === "perks" && result.consistent) {
     state.perksSaved = result;
     try { localStorage.setItem(PERKS_KEY, JSON.stringify(result)); } catch {}
+    // The movement line lists the Globes once owned, so it can set the picker.
+    const globes = globesFromPerks(result);
+    if (globes) setGlobes(globes);
   }
 }
 
@@ -311,6 +326,7 @@ function apply() {
     fort: state.fort,
     talents: state.talents,
     perks: state.perksSaved,
+    globes: state.globes,
   });
   let lab;
   try { lab = JSON.parse(localStorage.getItem(LAB_STORAGE_KEY)); } catch { lab = null; }
@@ -346,6 +362,11 @@ const CSS = `
 .swi-bad { color: #b91c1c !important; }
 .swi-side { display: flex; flex-direction: column; gap: 6px; justify-content: center; }
 .swi-side select { padding: 4px 6px; }
+.swi-side label { display: flex; flex-direction: column; gap: 4px; }
+.swi-ex-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-top: 8px; }
+.swi-ex-grid figure { margin: 0; }
+.swi-ex-grid img { width: 100%; height: 180px; object-fit: contain; background: #0f172a; border: 1px solid #d8dee8; border-radius: 6px; display: block; }
+.swi-ex-grid figcaption { margin-top: 4px; color: #4b5563; }
 .swi-warn { margin: 8px 0 0; padding-left: 18px; color: #92400e; }
 .swi details { margin-top: 10px; }
 .swi summary { cursor: pointer; font-weight: 600; }
@@ -451,11 +472,11 @@ function details() {
   if (p && !p.error) {
     parts.push(h("details", { open: "", "data-key": "applied" }, h("summary", {}, "Written to Me"),
       h("table", {},
-        h("tr", {}, h("th", {}, "Role"), h("th", {}, "Tier"), h("th", {}, "Gather time"), h("th", {}, "Success"), h("th", {}, "Double"), h("th", {}, "Process time"), h("th", {}, "Success"), h("th", {}, "Save")),
+        h("tr", {}, h("th", {}, "Role"), h("th", {}, "Tier"), h("th", {}, "Gather time"), h("th", {}, "Success"), h("th", {}, "Double"), h("th", {}, "Process time"), h("th", {}, "Success"), h("th", {}, "Save"), h("th", {}, "Auto-process"), h("th", {}, "Auto-bank")),
         Object.entries(p.roleStats).map(([role, r]) => h("tr", {},
           h("td", {}, role), h("td", {}, `T${p.roleTiers[role]}`),
           h("td", {}, r.gather_time.toFixed(3)), h("td", {}, pct(r.gather_success)), h("td", {}, pct(r.double_gather)),
-          h("td", {}, r.process_time.toFixed(3)), h("td", {}, pct(r.process_success)), h("td", {}, pct(r.material_save ?? 0)))),
+          h("td", {}, r.process_time.toFixed(3)), h("td", {}, pct(r.process_success)), h("td", {}, pct(r.material_save ?? 0)), h("td", {}, pct(r.auto_process ?? 0)), h("td", {}, pct(r.auto_bank ?? 0)))),
       ),
       h("p", {}, `Movement speed ${p.movementSpeed} (${POTION_LABELS[state.potion]} potion).`
         + (state.fort.known ? ` Backpack ${p.backpackSize} slots.` : "")),
@@ -497,6 +518,12 @@ function card() {
     o.selected = k === state.potion;
     return o;
   }));
+  const globes = h("select", { onchange: (e) => { setGlobes(e.target.value); applySoon(); } },
+    Object.keys(GLOBES).map((k) => {
+      const o = h("option", { value: k }, GLOBE_LABELS[k]);
+      o.selected = k === state.globes;
+      return o;
+    }));
   const el = h("section", {
     class: "swi", id: "swi-card",
     // Several files dropped anywhere on the card are sorted out like a folder.
@@ -518,13 +545,39 @@ function card() {
       zone("fortress", "Fortress collection", "Collections → The Fortress, opened, with Milestone Rewards and Rare Drops."),
       zone("fortify", "Fortify Tree", "Collections → Fortify Tree, with the stat summary in the top-left corner."),
       zone("perks", "Unlocks → Perks", "Scroll the Unlocks page to Perks so the Total Movement Speed line shows."),
-      h("label", { class: "swi-side" }, "Movement potion", potion)),
+      h("div", { class: "swi-side" },
+        h("label", {}, "Movement potion ", potion),
+        h("label", { title: "Quest rewards from the Mastery trials. Each gives auto-process and auto-bank chance (5% / 10%) to every role." }, "Globes of Skills ", globes))),
+    examples(),
     fortPicker(),
     warnings.length ? h("ul", { class: "swi-warn" }, warnings.map((w) => h("li", {}, w))) : null,
     h("p", {}, state.perksSaved
       ? "Movement speed comes from the Perks screenshot (telescopes and compasses included)."
       : "Without the Perks screenshot, movement leaves out telescopes and compasses."),
     details());
+  return el;
+}
+
+function setGlobes(value) {
+  state.globes = value;
+  try { localStorage.setItem(GLOBES_KEY, value); } catch {}
+}
+
+// Example screenshots, collapsed by default so they stay out of the way.
+function examples() {
+  let open = false;
+  try { open = localStorage.getItem(EXAMPLES_KEY) === "1"; } catch {}
+  const el = h("details", { class: "swi-examples", ontoggle: () => {
+    try { localStorage.setItem(EXAMPLES_KEY, el.open ? "1" : "0"); } catch {}
+  } }, h("summary", {}, "What to screenshot (examples)"),
+    h("div", { class: "swi-ex-grid" }, EXAMPLES.map(([kind, title, note]) => {
+      // Absolute, because the card lives inside the Lab's iframe.
+      const src = new URL(`examples/${kind}.webp`, document.baseURI).href;
+      return h("figure", {},
+        h("a", { href: src, target: "_blank", rel: "noopener" }, h("img", { src, alt: `Example ${title} screenshot`, loading: "lazy" })),
+        h("figcaption", {}, h("strong", {}, title), " ", note));
+    })));
+  el.open = open;
   return el;
 }
 
